@@ -1,0 +1,11 @@
+.venv/
+__pycache__/
+.pytest_cache/
+*.egg-info/
+build/
+dist/
+.DS_Store
+
+# Generated OMR, review and editor exports. Keep public input samples and
+# documentation under demos/ tracked, but never commit large run artifacts.
+demos/**/output/

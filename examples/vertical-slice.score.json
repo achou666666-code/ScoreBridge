@@ -1,0 +1,668 @@
+{
+  "title": "ScoreBridge Vertical Slice",
+  "parts": [
+    {
+      "id": "P1",
+      "name": "Flute",
+      "instrument_id": "wind.flutes.flute",
+      "transposition": null,
+      "staves": [
+        {
+          "id": "P1-S1",
+          "measures": [
+            {
+              "number": 1,
+              "events": [
+                {
+                  "kind": "note",
+                  "duration": "quarter",
+                  "pitch": "C5",
+                  "pitches": [],
+                  "voice": 1,
+                  "accidental": null,
+                  "tie_start": false,
+                  "tie_stop": false,
+                  "articulations": [],
+                  "techniques": [],
+                  "source": null
+                },
+                {
+                  "kind": "note",
+                  "duration": "quarter",
+                  "pitch": "D5",
+                  "pitches": [],
+                  "voice": 1,
+                  "accidental": null,
+                  "tie_start": false,
+                  "tie_stop": false,
+                  "articulations": [],
+                  "techniques": [],
+                  "source": null
+                },
+                {
+                  "kind": "note",
+                  "duration": "quarter",
+                  "pitch": "E5",
+                  "pitches": [],
+                  "voice": 1,
+                  "accidental": null,
+                  "tie_start": false,
+                  "tie_stop": false,
+                  "articulations": [],
+                  "techniques": [],
+                  "source": null
+                },
+                {
+                  "kind": "note",
+                  "duration": "quarter",
+                  "pitch": "F5",
+                  "pitches": [],
+                  "voice": 1,
+                  "accidental": null,
+                  "tie_start": false,
+                  "tie_stop": false,
+                  "articulations": [],
+                  "techniques": [],
+                  "source": null
+                }
+              ],
+              "key_fifths": 0,
+              "time_beats": 4,
+              "time_beat_type": 4,
+              "tempo_bpm": 96,
+              "tempo_beat": "quarter",
+              "dynamics": [
+                "mf"
+              ],
+              "directions": [],
+              "source": null
+            },
+            {
+              "number": 2,
+              "events": [
+                {
+                  "kind": "rest",
+                  "duration": "quarter",
+                  "pitch": null,
+                  "pitches": [],
+                  "voice": 1,
+                  "accidental": null,
+                  "tie_start": false,
+                  "tie_stop": false,
+                  "articulations": [],
+                  "techniques": [],
+                  "source": null
+                },
+                {
+                  "kind": "rest",
+                  "duration": "quarter",
+                  "pitch": null,
+                  "pitches": [],
+                  "voice": 1,
+                  "accidental": null,
+                  "tie_start": false,
+                  "tie_stop": false,
+                  "articulations": [],
+                  "techniques": [],
+                  "source": null
+                },
+                {
+                  "kind": "rest",
+                  "duration": "quarter",
+                  "pitch": null,
+                  "pitches": [],
+                  "voice": 1,
+                  "accidental": null,
+                  "tie_start": false,
+                  "tie_stop": false,
+                  "articulations": [],
+                  "techniques": [],
+                  "source": null
+                }
+              ],
+              "key_fifths": -1,
+              "time_beats": 3,
+              "time_beat_type": 4,
+              "tempo_bpm": null,
+              "tempo_beat": "quarter",
+              "dynamics": [],
+              "directions": [
+                "legato"
+              ],
+              "source": null
+            }
+          ],
+          "clef": "treble"
+        }
+      ]
+    },
+    {
+      "id": "P2",
+      "name": "Clarinet in B-flat",
+      "instrument_id": "wind.reed.clarinet.bflat",
+      "transposition": "Bb",
+      "staves": [
+        {
+          "id": "P2-S1",
+          "measures": [
+            {
+              "number": 1,
+              "events": [
+                {
+                  "kind": "note",
+                  "duration": "quarter",
+                  "pitch": "C5",
+                  "pitches": [],
+                  "voice": 1,
+                  "accidental": null,
+                  "tie_start": false,
+                  "tie_stop": false,
+                  "articulations": [],
+                  "techniques": [],
+                  "source": null
+                },
+                {
+                  "kind": "note",
+                  "duration": "quarter",
+                  "pitch": "D5",
+                  "pitches": [],
+                  "voice": 1,
+                  "accidental": null,
+                  "tie_start": false,
+                  "tie_stop": false,
+                  "articulations": [],
+                  "techniques": [],
+                  "source": null
+                },
+                {
+                  "kind": "note",
+                  "duration": "quarter",
+                  "pitch": "E5",
+                  "pitches": [],
+                  "voice": 1,
+                  "accidental": null,
+                  "tie_start": false,
+                  "tie_stop": false,
+                  "articulations": [],
+                  "techniques": [],
+                  "source": null
+                },
+                {
+                  "kind": "note",
+                  "duration": "quarter",
+                  "pitch": "F5",
+                  "pitches": [],
+                  "voice": 1,
+                  "accidental": null,
+                  "tie_start": false,
+                  "tie_stop": false,
+                  "articulations": [],
+                  "techniques": [],
+                  "source": null
+                }
+              ],
+              "key_fifths": 0,
+              "time_beats": 4,
+              "time_beat_type": 4,
+              "tempo_bpm": 96,
+              "tempo_beat": "quarter",
+              "dynamics": [
+                "mf"
+              ],
+              "directions": [],
+              "source": null
+            },
+            {
+              "number": 2,
+              "events": [
+                {
+                  "kind": "rest",
+                  "duration": "quarter",
+                  "pitch": null,
+                  "pitches": [],
+                  "voice": 1,
+                  "accidental": null,
+                  "tie_start": false,
+                  "tie_stop": false,
+                  "articulations": [],
+                  "techniques": [],
+                  "source": null
+                },
+                {
+                  "kind": "rest",
+                  "duration": "quarter",
+                  "pitch": null,
+                  "pitches": [],
+                  "voice": 1,
+                  "accidental": null,
+                  "tie_start": false,
+                  "tie_stop": false,
+                  "articulations": [],
+                  "techniques": [],
+                  "source": null
+                },
+                {
+                  "kind": "rest",
+                  "duration": "quarter",
+                  "pitch": null,
+                  "pitches": [],
+                  "voice": 1,
+                  "accidental": null,
+                  "tie_start": false,
+                  "tie_stop": false,
+                  "articulations": [],
+                  "techniques": [],
+                  "source": null
+                }
+              ],
+              "key_fifths": -1,
+              "time_beats": 3,
+              "time_beat_type": 4,
+              "tempo_bpm": null,
+              "tempo_beat": "quarter",
+              "dynamics": [],
+              "directions": [
+                "legato"
+              ],
+              "source": null
+            }
+          ],
+          "clef": "treble"
+        }
+      ]
+    },
+    {
+      "id": "P3",
+      "name": "Horn in F",
+      "instrument_id": "brass.french-horn",
+      "transposition": "F",
+      "staves": [
+        {
+          "id": "P3-S1",
+          "measures": [
+            {
+              "number": 1,
+              "events": [
+                {
+                  "kind": "note",
+                  "duration": "quarter",
+                  "pitch": "C5",
+                  "pitches": [],
+                  "voice": 1,
+                  "accidental": null,
+                  "tie_start": false,
+                  "tie_stop": false,
+                  "articulations": [],
+                  "techniques": [],
+                  "source": null
+                },
+                {
+                  "kind": "note",
+                  "duration": "quarter",
+                  "pitch": "D5",
+                  "pitches": [],
+                  "voice": 1,
+                  "accidental": null,
+                  "tie_start": false,
+                  "tie_stop": false,
+                  "articulations": [],
+                  "techniques": [],
+                  "source": null
+                },
+                {
+                  "kind": "note",
+                  "duration": "quarter",
+                  "pitch": "E5",
+                  "pitches": [],
+                  "voice": 1,
+                  "accidental": null,
+                  "tie_start": false,
+                  "tie_stop": false,
+                  "articulations": [],
+                  "techniques": [],
+                  "source": null
+                },
+                {
+                  "kind": "note",
+                  "duration": "quarter",
+                  "pitch": "F5",
+                  "pitches": [],
+                  "voice": 1,
+                  "accidental": null,
+                  "tie_start": false,
+                  "tie_stop": false,
+                  "articulations": [],
+                  "techniques": [],
+                  "source": null
+                }
+              ],
+              "key_fifths": 0,
+              "time_beats": 4,
+              "time_beat_type": 4,
+              "tempo_bpm": 96,
+              "tempo_beat": "quarter",
+              "dynamics": [
+                "mf"
+              ],
+              "directions": [],
+              "source": null
+            },
+            {
+              "number": 2,
+              "events": [
+                {
+                  "kind": "rest",
+                  "duration": "quarter",
+                  "pitch": null,
+                  "pitches": [],
+                  "voice": 1,
+                  "accidental": null,
+                  "tie_start": false,
+                  "tie_stop": false,
+                  "articulations": [],
+                  "techniques": [],
+                  "source": null
+                },
+                {
+                  "kind": "rest",
+                  "duration": "quarter",
+                  "pitch": null,
+                  "pitches": [],
+                  "voice": 1,
+                  "accidental": null,
+                  "tie_start": false,
+                  "tie_stop": false,
+                  "articulations": [],
+                  "techniques": [],
+                  "source": null
+                },
+                {
+                  "kind": "rest",
+                  "duration": "quarter",
+                  "pitch": null,
+                  "pitches": [],
+                  "voice": 1,
+                  "accidental": null,
+                  "tie_start": false,
+                  "tie_stop": false,
+                  "articulations": [],
+                  "techniques": [],
+                  "source": null
+                }
+              ],
+              "key_fifths": -1,
+              "time_beats": 3,
+              "time_beat_type": 4,
+              "tempo_bpm": null,
+              "tempo_beat": "quarter",
+              "dynamics": [],
+              "directions": [
+                "legato"
+              ],
+              "source": null
+            }
+          ],
+          "clef": "treble"
+        }
+      ]
+    },
+    {
+      "id": "P4",
+      "name": "Piano",
+      "instrument_id": "keyboard.piano",
+      "transposition": null,
+      "staves": [
+        {
+          "id": "P4-S1",
+          "measures": [
+            {
+              "number": 1,
+              "events": [
+                {
+                  "kind": "rest",
+                  "duration": "quarter",
+                  "pitch": null,
+                  "pitches": [],
+                  "voice": 1,
+                  "accidental": null,
+                  "tie_start": false,
+                  "tie_stop": false,
+                  "articulations": [],
+                  "techniques": [],
+                  "source": null
+                },
+                {
+                  "kind": "rest",
+                  "duration": "quarter",
+                  "pitch": null,
+                  "pitches": [],
+                  "voice": 1,
+                  "accidental": null,
+                  "tie_start": false,
+                  "tie_stop": false,
+                  "articulations": [],
+                  "techniques": [],
+                  "source": null
+                },
+                {
+                  "kind": "rest",
+                  "duration": "quarter",
+                  "pitch": null,
+                  "pitches": [],
+                  "voice": 1,
+                  "accidental": null,
+                  "tie_start": false,
+                  "tie_stop": false,
+                  "articulations": [],
+                  "techniques": [],
+                  "source": null
+                },
+                {
+                  "kind": "rest",
+                  "duration": "quarter",
+                  "pitch": null,
+                  "pitches": [],
+                  "voice": 1,
+                  "accidental": null,
+                  "tie_start": false,
+                  "tie_stop": false,
+                  "articulations": [],
+                  "techniques": [],
+                  "source": null
+                }
+              ],
+              "key_fifths": 0,
+              "time_beats": 4,
+              "time_beat_type": 4,
+              "tempo_bpm": null,
+              "tempo_beat": "quarter",
+              "dynamics": [],
+              "directions": [],
+              "source": null
+            },
+            {
+              "number": 2,
+              "events": [
+                {
+                  "kind": "rest",
+                  "duration": "quarter",
+                  "pitch": null,
+                  "pitches": [],
+                  "voice": 1,
+                  "accidental": null,
+                  "tie_start": false,
+                  "tie_stop": false,
+                  "articulations": [],
+                  "techniques": [],
+                  "source": null
+                },
+                {
+                  "kind": "rest",
+                  "duration": "quarter",
+                  "pitch": null,
+                  "pitches": [],
+                  "voice": 1,
+                  "accidental": null,
+                  "tie_start": false,
+                  "tie_stop": false,
+                  "articulations": [],
+                  "techniques": [],
+                  "source": null
+                },
+                {
+                  "kind": "rest",
+                  "duration": "quarter",
+                  "pitch": null,
+                  "pitches": [],
+                  "voice": 1,
+                  "accidental": null,
+                  "tie_start": false,
+                  "tie_stop": false,
+                  "articulations": [],
+                  "techniques": [],
+                  "source": null
+                }
+              ],
+              "key_fifths": -1,
+              "time_beats": 3,
+              "time_beat_type": 4,
+              "tempo_bpm": null,
+              "tempo_beat": "quarter",
+              "dynamics": [],
+              "directions": [],
+              "source": null
+            }
+          ],
+          "clef": "treble"
+        },
+        {
+          "id": "P4-S2",
+          "measures": [
+            {
+              "number": 1,
+              "events": [
+                {
+                  "kind": "rest",
+                  "duration": "quarter",
+                  "pitch": null,
+                  "pitches": [],
+                  "voice": 1,
+                  "accidental": null,
+                  "tie_start": false,
+                  "tie_stop": false,
+                  "articulations": [],
+                  "techniques": [],
+                  "source": null
+                },
+                {
+                  "kind": "rest",
+                  "duration": "quarter",
+                  "pitch": null,
+                  "pitches": [],
+                  "voice": 1,
+                  "accidental": null,
+                  "tie_start": false,
+                  "tie_stop": false,
+                  "articulations": [],
+                  "techniques": [],
+                  "source": null
+                },
+                {
+                  "kind": "rest",
+                  "duration": "quarter",
+                  "pitch": null,
+                  "pitches": [],
+                  "voice": 1,
+                  "accidental": null,
+                  "tie_start": false,
+                  "tie_stop": false,
+                  "articulations": [],
+                  "techniques": [],
+                  "source": null
+                },
+                {
+                  "kind": "rest",
+                  "duration": "quarter",
+                  "pitch": null,
+                  "pitches": [],
+                  "voice": 1,
+                  "accidental": null,
+                  "tie_start": false,
+                  "tie_stop": false,
+                  "articulations": [],
+                  "techniques": [],
+                  "source": null
+                }
+              ],
+              "key_fifths": 0,
+              "time_beats": 4,
+              "time_beat_type": 4,
+              "tempo_bpm": null,
+              "tempo_beat": "quarter",
+              "dynamics": [],
+              "directions": [],
+              "source": null
+            },
+            {
+              "number": 2,
+              "events": [
+                {
+                  "kind": "rest",
+                  "duration": "quarter",
+                  "pitch": null,
+                  "pitches": [],
+                  "voice": 1,
+                  "accidental": null,
+                  "tie_start": false,
+                  "tie_stop": false,
+                  "articulations": [],
+                  "techniques": [],
+                  "source": null
+                },
+                {
+                  "kind": "rest",
+                  "duration": "quarter",
+                  "pitch": null,
+                  "pitches": [],
+                  "voice": 1,
+                  "accidental": null,
+                  "tie_start": false,
+                  "tie_stop": false,
+                  "articulations": [],
+                  "techniques": [],
+                  "source": null
+                },
+                {
+                  "kind": "rest",
+                  "duration": "quarter",
+                  "pitch": null,
+                  "pitches": [],
+                  "voice": 1,
+                  "accidental": null,
+                  "tie_start": false,
+                  "tie_stop": false,
+                  "articulations": [],
+                  "techniques": [],
+                  "source": null
+                }
+              ],
+              "key_fifths": -1,
+              "time_beats": 3,
+              "time_beat_type": 4,
+              "tempo_bpm": null,
+              "tempo_beat": "quarter",
+              "dynamics": [],
+              "directions": [],
+              "source": null
+            }
+          ],
+          "clef": "bass"
+        }
+      ]
+    }
+  ],
+  "pitch_mode": "written",
+  "metadata": {
+    "fixture": true
+  }
+}
