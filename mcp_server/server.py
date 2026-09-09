@@ -7,7 +7,7 @@ from scorebridge.validation import validate_score
 from scorebridge.musescore import MuseScoreAdapter, MuseScoreError
 from scorebridge.patches import apply_patch
 from scorebridge.score_ir import save_score
-from scorebridge.input import inspect_input, prepare_image, prepare_input
+from scorebridge.input import classify_page, inspect_input, prepare_image, prepare_input
 from scorebridge.omr import OMRAdapter, run_omr
 from scorebridge.musicxml import parse_musicxml
 from scorebridge.review import create_review_packet, apply_review
@@ -95,6 +95,14 @@ def image_prepare(input_path: str, output_path: str, scale: int = 2) -> dict:
 def input_prepare(input_path: str, output_dir: str, dpi: int = 450, enhance: bool = True) -> dict:
     """Normalize a PDF, image, or image directory into a source-linked evidence package."""
     return prepare_input(input_path, output_dir, dpi=dpi, enhance=enhance)
+
+@mcp.tool()
+def page_classify(input_path: str) -> dict:
+    """Conservatively classify a raster page as score, non-score, or uncertain."""
+    try:
+        return classify_page(input_path)
+    except (ImportError, OSError, ValueError) as exc:
+        return {"status": "error", "error": str(exc)}
 
 @mcp.tool()
 def omr_status() -> dict:

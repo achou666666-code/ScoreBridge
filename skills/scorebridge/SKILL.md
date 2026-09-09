@@ -16,6 +16,8 @@ Use ScoreBridge as the structured bridge between source documents, music semanti
 5. Validate duration closure, staff alignment, instrument identity, key and meter changes, then compile to MusicXML or a target adapter.
 6. Round-trip through the target editor and compare the returned structure. Surface precise review items with page, staff, measure and source crop.
 
+For multi-page PDFs, render each page at about 450 DPI and process pages independently. Classify only obvious cover or illustration pages as `non_score`; keep uncertain pages in the OMR queue. Retain original, rendered, enhanced, OMR logs, and MusicXML for every page. Continue after a page failure and record it in `run-summary.json`; never discard the complete score because one page failed.
+
 ## Agent review protocol
 
 After OMR import, call `review_create` with the Score IR JSON and the input `manifest.json`. The result contains one task per part/staff/measure. Each task includes the instrument identity, clef, candidate events, previous and next measure numbers, source coordinates, and the original/rendered/enhanced page paths.
