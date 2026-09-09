@@ -13,6 +13,7 @@ from scorebridge.musicxml import parse_musicxml
 from scorebridge.review import create_review_packet, apply_review
 from scorebridge.finalize import finalize_score
 from scorebridge.workflow import transcribe_score
+from scorebridge.doctor import diagnose
 
 try:
     from mcp.server.fastmcp import FastMCP
@@ -20,6 +21,11 @@ except ImportError as exc:
     raise SystemExit("Install ScoreBridge with the mcp extra: pip install -e '.[mcp]'") from exc
 
 mcp = FastMCP("ScoreBridge")
+
+@mcp.tool()
+def scorebridge_doctor() -> dict:
+    """Check Python, image, OMR, MuseScore and MCP dependencies."""
+    return diagnose()
 
 @mcp.tool()
 def score_validate(input_path: str) -> dict:

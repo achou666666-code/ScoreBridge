@@ -10,10 +10,23 @@ from zipfile import BadZipFile, ZipFile
 class MuseScoreError(RuntimeError):
     pass
 
+
+class MuseScoreBackend:
+    """Small backend contract shared by CLI and future MCP adapters."""
+
+    name = "base"
+
+    def status(self) -> dict:
+        raise NotImplementedError
+
+    def convert(self, input_path: str, output_path: str) -> dict:
+        raise NotImplementedError
+
 @dataclass
-class MuseScoreAdapter:
+class MuseScoreAdapter(MuseScoreBackend):
     executable: Optional[str] = None
     timeout: int = 90
+    name: str = "cli"
 
     def resolve(self) -> Optional[Path]:
         candidates = [self.executable] if self.executable else [os.environ.get("MUSESCORE_BIN")]

@@ -15,6 +15,20 @@ scorebridge compile examples/vertical-slice.score.json --output examples/vertica
 pytest
 ```
 
+## Install on another computer
+
+Clone the repository, create an isolated environment, and install the optional dependencies:
+
+```bash
+git clone https://github.com/achou666666-code/ScoreBridge.git
+cd ScoreBridge
+python3 -m venv .venv
+.venv/bin/python -m pip install -e '.[test,mcp,image]'
+.venv/bin/scorebridge doctor
+```
+
+`scorebridge doctor` reports the status of Python, image/PDF libraries, Audiveris, MuseScore, and the MCP package. Install Audiveris and MuseScore separately, or set `AUDIVERIS_BIN` and `MUSESCORE_BIN` when they are outside the standard paths. A `needs_setup` result identifies what is missing; it does not modify the computer.
+
 The fixture contains flute, B-flat clarinet, horn in F, and a two-staff piano. It changes from 4/4 to 3/4 and carries written keys, tempo, dynamics, and technique text.
 
 ## MCP
@@ -23,7 +37,7 @@ The fixture contains flute, B-flat clarinet, horn in F, and a two-staff piano. I
 python mcp_server/server.py
 ```
 
-Available tools: `score_inspect`, `score_validate`, `score_compile`, `score_apply_patch`, `score_build_mscz`, `input_inspect`, `input_prepare`, `image_prepare`, `musescore_status`, and `musescore_convert`.
+Available tools: `scorebridge_doctor`, `score_inspect`, `score_validate`, `score_compile`, `score_apply_patch`, `score_build_mscz`, `input_inspect`, `input_prepare`, `image_prepare`, `musescore_status`, and `musescore_convert`.
 OMR tools now include `omr_status` and `musicxml_import`. The OMR engine is optional: when Audiveris is installed, its MusicXML output can be imported into ScoreBridge; when it is absent, the status tool reports the exact setup needed.
 
 `input_prepare` is the canonical first step for agent jobs. It accepts a PDF, one raster page, or a directory of raster pages. Image directories are naturally sorted (for example `page-2` before `page-10`) and combined into an internal PDF. The output directory contains `original/` untouched sources, `pages/` high-resolution renders, `enhanced/` OMR copies, `input.pdf` for image inputs, and `manifest.json` with source/page/DPI/coordinate metadata. The original and enhanced pages are both retained so an Agent can use the enhanced image for reading while returning to the source when preprocessing may have changed a symbol.
