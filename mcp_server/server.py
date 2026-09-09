@@ -1,10 +1,11 @@
 """ScoreBridge MCP entry point. Install with `pip install -e '.[mcp]'`."""
 import json
 from pathlib import Path
+from typing import Optional
 from scorebridge.score_ir import load_score
 from scorebridge.musicxml import compile_musicxml
 from scorebridge.validation import validate_score
-from scorebridge.musescore import MuseScoreAdapter, MuseScoreError
+from scorebridge.musescore import MuseScoreAdapter, MuseScoreError, MuseScoreWebSocketBackend, MuseScoreWebSocketError
 from scorebridge.patches import apply_patch
 from scorebridge.score_ir import save_score
 from scorebridge.input import classify_page, inspect_input, prepare_image, prepare_input
@@ -68,6 +69,19 @@ def musescore_convert(input_path: str, output_path: str, executable: str = "") -
     try:
         return {"status": "pass", **MuseScoreAdapter(executable=executable or None).convert(input_path, output_path)}
     except (MuseScoreError, TimeoutError) as exc:
+        return {"status": "error", "error": str(exc)}
+
+@mcp.tool()
+def musescore_websocket_status(url: str = "") -> dict:
+    """Check a running MuseScore QML/WebSocket plugin."""
+    return MuseScoreWebSocketBackend(url=url or None).status()
+
+@mcp.tool()
+def musescore_websocket_command(action: str, params: Optional[dict] = None, url: str = "") -> dict:
+    """Send one command to a compatible MuseScore plugin, such as getScore or addNote."""
+    try:
+        return {"status": "pass", "response": MuseScoreWebSocketBackend(url=url or None).command(action, params or {})}
+    except MuseScoreWebSocketError as exc:
         return {"status": "error", "error": str(exc)}
 
 @mcp.tool()
