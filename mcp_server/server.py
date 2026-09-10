@@ -15,6 +15,7 @@ from scorebridge.review import create_review_packet, apply_review
 from scorebridge.finalize import finalize_score
 from scorebridge.workflow import transcribe_score
 from scorebridge.doctor import diagnose
+from scorebridge.agent_workflow import prepare_agent_job, execute_plan_file
 
 try:
     from mcp.server.fastmcp import FastMCP
@@ -158,12 +159,21 @@ def review_apply(score_path: str, decisions_path: str, output_path: str = "") ->
 
 @mcp.tool()
 def score_finalize(score_path: str, output_dir: str, executable: str = "", allow_issues: bool = True) -> dict:
-    """Compile Score IR and export MusicXML, MSCZ, MIDI, PDF, plus a round-trip audit."""
+    """Deliver MSCZ only; keep compilation and structural audit files internal."""
     return finalize_score(score_path, output_dir, executable, allow_issues)
 
 @mcp.tool()
-def score_transcribe(input_path: str, output_dir: str, decisions_path: str = "", audiveris: str = "", musescore: str = "", dpi: int = 450) -> dict:
-    """Run the complete input -> OMR -> Agent review -> MuseScore workflow."""
-    return transcribe_score(input_path, output_dir, decisions_path, audiveris, musescore, dpi)
+def score_transcribe(input_path: str, output_dir: str, decisions_path: str = "", audiveris: str = "", musescore: str = "", dpi: int = 450, mode: str = "agent") -> dict:
+    """Prepare source images for the calling Agent. OMR requires explicit mode='omr'."""
+    if mode == "agent":
+        return prepare_agent_job(input_path, output_dir, dpi)
+    if mode == "omr":
+        return transcribe_score(input_path, output_dir, decisions_path, audiveris, musescore, dpi)
+    return {"status": "error", "error": "mode must be agent or omr"}
+
+@mcp.tool()
+def musescore_execute_plan(input_path: str, url: str = "") -> dict:
+    """Execute ordered Agent editor commands; return completed IDs on partial failure."""
+    return execute_plan_file(input_path, url)
 
 if __name__ == "__main__": mcp.run()

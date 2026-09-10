@@ -1,33 +1,28 @@
 ---
 name: scorebridge
-description: Transcribe PDF or image music, compile structured scores, and inspect or edit notation through ScoreBridge and supported notation-software adapters. Use for OMR, MusicXML, MSCZ, MIDI, MuseScore, Sibelius, or Cubase score workflows.
+description: Read PDF or image sheet music as an Agent and create editable MuseScore scores using ScoreBridge tools and a live MuseScore bridge.
 ---
 
 # ScoreBridge
 
-Use ScoreBridge as the structured bridge between source documents, music semantics, and notation software.
+The calling Agent reads the music. Deliver one editable, playable `.mscz` by default.
+Audiveris is optional assistance, not the default recognition engine.
 
-## Workflow
+## Source to score
 
-1. Inspect the input and preserve whether the source is written pitch or concert pitch. Printed instrumental scores default to written pitch.
-2. For PDF or image input, retain page coordinates for every recognized element. Enhance a page when its quality score predicts recognition loss, then keep both original and enhanced images.
-3. Establish parts, staves, clefs, key and meter timelines before compiling notes. Treat percussion and multi-staff instruments explicitly.
-4. Convert recognition output to Score IR. Do not send thousands of untracked GUI note-entry actions when a score or measure transaction is available.
-5. Validate duration closure, staff alignment, instrument identity, key and meter changes, then compile to MusicXML or a target adapter.
-6. Round-trip through the target editor and compare the returned structure. Surface precise review items with page, staff, measure and source crop.
+1. Run `scorebridge doctor` and `scorebridge editor-status`. An installed MuseScore executable is not proof that the live plugin is connected.
+2. Call `score_transcribe(input_path, output_dir)` or `scorebridge prepare INPUT --output WORKDIR`. The default prepares images and returns `awaiting_agent`: this is the Agent's next action, not a request for human review. Read the returned page images. Infer page order from printed numbering and musical continuity; filename sorting is only a starting point. Identify covers yourself before skipping them.
+3. Read each part in musical order. Establish written/concert pitch, instruments, staves, clefs, keys and meters; then notes/rests/chords, voices, duration, tempo changes, lyrics, ties/slurs, dynamics, articulations, techniques, repeats and layout. Preserve printed pitch spelling and per-part key signatures. Use enhancement for readability, retaining the original as evidence when enhancement changes symbols. Resolve uncertain marks from visual and musical context; track guesses internally and continue the complete score.
+4. Keep a compact internal plan per part/measure. It can be tool arguments or JSON; the legacy Score IR is optional. Do not force unsupported notation through a lossy schema. Read [editor-plan.md](references/editor-plan.md) for commands, protocol differences and verified backend limitations.
+5. Create/import the initial score, then apply targeted editor changes through MCP. Batch known operations where supported. Check actual instrument identity and playback assignment, not just staff labels. Internal MusicXML is permitted for efficient initial import, but is not a user deliverable. Missing MCP actions require an adapter extension or an explicitly reported software-operation fallback, not silently dropped music.
+6. Save MSCZ and check that it reopens, contains the intended parts and music, and uses the intended playback assignments. Keep checks proportional: no mandatory second full recognition pass or human measure-by-measure approval. A file/transport check is not proof of source accuracy or audible sound quality. Report only checks actually performed.
 
-For multi-page PDFs, render each page at about 450 DPI and process pages independently. Classify only obvious cover or illustration pages as `non_score`; keep uncertain pages in the OMR queue. Retain original, rendered, enhanced, OMR logs, and MusicXML for every page. Continue after a page failure and record it in `run-summary.json`; never discard the complete score because one page failed.
+## Tools
 
-## Agent review protocol
+- `musescore_websocket_status`: negotiate the plugin protocol with read-only ping.
+- `musescore_websocket_command`: execute one plugin-supported command; plugin errors propagate.
+- `musescore_execute_plan`: ordered JSON command plan with completed IDs on failure. CLI: `scorebridge execute-plan PLAN.json`.
+- `score_finalize`: legacy Score IR compilation route delivering MSCZ, with temporary XML and audit data under `.scorebridge/`.
+- `score_transcribe(..., mode="omr")`: opt-in legacy OMR/review route. Do not call it unless OMR assistance is wanted.
 
-After OMR import, call `review_create` with the Score IR JSON and the input `manifest.json`. The result contains one task per part/staff/measure. Each task includes the instrument identity, clef, candidate events, previous and next measure numbers, source coordinates, and the original/rendered/enhanced page paths.
-
-The Agent may leave a task unchanged with `{"action":"keep"}` or provide a replacement `patch` using the same high-level fields as `score_apply_patch`. Decisions are applied with `review_apply`. A rejected local decision is reported with its target and validation issue; the full score remains available and can still be compiled, so one uncertain measure never discards the rest of the transcription.
-
-Use the enhanced page as the primary reading view, then inspect the original source whenever preprocessing may have altered an accidental, notehead, lyric, articulation, or other symbol. Review results should record the Agent's confidence and rationale in the task's `decision` object for later audit.
-
-Use `scorebridge validate FILE.score.json` before compilation and `scorebridge compile FILE.score.json --output FILE.musicxml` to produce editable MusicXML.
-
-For a complete job, call `score_transcribe` once with the user input and an output directory. It runs input normalization, source evidence creation, OMR, and review packet generation. Pass an Agent decision JSON as `decisions_path` to continue automatically through review application and final MuseScore exports. PDF is retained as an internal bridge artifact, while single-page raster input may be sent directly to Audiveris when that backend handles it more reliably.
-
-When review decisions are complete, call `score_finalize` to compile and export MusicXML, MSCZ, MIDI, and PDF in one transaction. It also imports the MSCZ back to MusicXML and returns an instrument/part audit. A nonzero MuseScore exit code is acceptable only when the requested output file passes archive/file validation; the result then includes a warning.
+Deliver the MSCZ link. Keep plans, source copies, intermediate formats and diagnostics in the working directory rather than presenting them as additional deliverables.

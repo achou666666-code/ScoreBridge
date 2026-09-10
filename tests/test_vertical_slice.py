@@ -25,4 +25,6 @@ def test_finalize_without_musescore_keeps_musicxml(tmp_path):
     save_score(fixture_score(), score_path)
     result = finalize_score(str(score_path), str(tmp_path / "exports"), executable=str(tmp_path / "missing"))
     assert result["musicxml_path"]
-    assert (tmp_path / "exports/score.musicxml").exists()
+    assert (tmp_path / "exports/.scorebridge/score.musicxml").exists()
+
+    assert result["status"] == "error"

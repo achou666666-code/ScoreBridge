@@ -1,84 +1,118 @@
 # ScoreBridge
 
-ScoreBridge gives AI agents a structured path from PDF or image notation to editable scores and direct notation-software control.
+Agent-led sheet-music transcription and MuseScore control. The calling Agent reads
+PDF/PNG/JPG/TIFF/WebP sources, organizes music, and uses editor tools to produce
+an editable, playable **MSCZ**. Audiveris is opt-in assistance.
 
-The current vertical slice provides a Score IR model, structural validation, MusicXML compilation, and an MCP server with inspect, validate, compile, and MuseScore environment tools. OMR and transactional GUI control are the next active slices.
+## Default workflow
 
-## Try the vertical slice
-
-```bash
-uv venv
-uv pip install -e '.[test,mcp]'
-python tests/make_fixture.py
-scorebridge validate examples/vertical-slice.score.json
-scorebridge compile examples/vertical-slice.score.json --output examples/vertical-slice.musicxml
-pytest
+```text
+PDF / images → source preparation → Agent reads the score
+→ internal music / command plan → MuseScore editing → MSCZ
 ```
 
-## Install on another computer
+The current implementation prepares source images, executes ordered live-plugin
+commands, and offers a legacy Score IR compilation adapter. It does **not** yet
+supply every MuseScore editing operation or prove high-accuracy orchestral
+transcription end to end. See the [actual editor capabilities](skills/scorebridge/references/editor-plan.md).
 
-Clone the repository, create an isolated environment, and install the optional dependencies:
+## Install
 
 ```bash
 git clone https://github.com/achou666666-code/ScoreBridge.git
 cd ScoreBridge
 python3 -m venv .venv
-.venv/bin/python -m pip install -e '.[test,mcp,image]'
+.venv/bin/python -m pip install -e '.[mcp,image,websocket,test]'
 .venv/bin/scorebridge doctor
+.venv/bin/scorebridge editor-status
 ```
 
-`scorebridge doctor` reports the status of Python, image/PDF libraries, Audiveris, MuseScore, and the MCP package. Install Audiveris and MuseScore separately, or set `AUDIVERIS_BIN` and `MUSESCORE_BIN` when they are outside the standard paths. A `needs_setup` result identifies what is missing; it does not modify the computer.
-
-The fixture contains flute, B-flat clarinet, horn in F, and a two-staff piano. It changes from 4/4 to 3/4 and carries written keys, tempo, dynamics, and technique text.
-
-## MCP
+Install MuseScore separately. `doctor` checks dependencies; `editor-status`
+actually contacts a running plugin. Audiveris is optional and its absence does
+not fail the environment check. Install the skill folder `skills/scorebridge`
+in your Agent's skill directory, and configure the MCP server with the environment's
+Python executable and the absolute path to `mcp_server/server.py`:
 
 ```bash
-python mcp_server/server.py
+.venv/bin/python mcp_server/server.py
 ```
 
-Available tools: `scorebridge_doctor`, `score_inspect`, `score_validate`, `score_compile`, `score_apply_patch`, `score_build_mscz`, `input_inspect`, `input_prepare`, `image_prepare`, `musescore_status`, and `musescore_convert`.
-OMR tools now include `omr_status` and `musicxml_import`. The OMR engine is optional: when Audiveris is installed, its MusicXML output can be imported into ScoreBridge; when it is absent, the status tool reports the exact setup needed.
+ScoreBridge provides a client for external MuseScore plugins, not a bundled
+editor plugin. Inspected implementations of
+[mcp-score](https://github.com/tskovlund/mcp-score) and
+[mcp-musescore](https://github.com/ghchen99/mcp-musescore) have different command
+sets and wire formats. A running compatible plugin is required for live editing.
+Set `SCOREBRIDGE_MUSESCORE_WS` for a custom endpoint (default `ws://localhost:8765`).
+Protocol detection uses read-only ping; `SCOREBRIDGE_MUSESCORE_PROTOCOL` can force
+`action` or `command`. No mutation is automatically retried after a timeout.
 
-`input_prepare` is the canonical first step for agent jobs. It accepts a PDF, one raster page, or a directory of raster pages. Image directories are naturally sorted (for example `page-2` before `page-10`) and combined into an internal PDF. The output directory contains `original/` untouched sources, `pages/` high-resolution renders, `enhanced/` OMR copies, `input.pdf` for image inputs, and `manifest.json` with source/page/DPI/coordinate metadata. The original and enhanced pages are both retained so an Agent can use the enhanced image for reading while returning to the source when preprocessing may have changed a symbol.
+## Agent entry point
 
-For multi-page PDFs, `score_transcribe` follows the validated multi-page regression path: render each page at about 450 DPI, classify only obvious cover or illustration pages as `non_score`, and run OMR independently on every other page. Uncertain pages remain in the OMR queue, so classification cannot silently discard a possible score page. Each page keeps its OMR output and log, and one bad page does not stop the rest. The run writes `run-summary.json` with classifications, skipped pages, failed pages, and the merged Score IR path.
-
-On macOS (Apple Silicon), install the official Audiveris release and place `Audiveris.app` in `/Applications`. ScoreBridge discovers `/Applications/Audiveris.app/Contents/MacOS/Audiveris` automatically; `AUDIVERIS_BIN` can be used for a custom location. The MCP `omr_run` tool accepts a PDF or image and always writes the detected MusicXML plus a `.score.json` into the requested output directory. When structural checks find suspicious measures, the result is `needs_review` with a validation report; the editable output is still produced so the Agent never discards the whole score because of local recognition errors.
-
-Edits use a transaction-like operation. For example, an Agent can replace one measure by identifying its part and staff, supplying events, and choosing an output JSON path. The patch is rejected when the resulting measure does not close its time signature, and the input remains unchanged on rejection.
-
-`musescore_status` should be called before conversion. The adapter reports the executable it found and returns captured process diagnostics when conversion fails. Set `MUSESCORE_BIN` or pass `executable` when MuseScore is installed outside the standard macOS path. On macOS, MuseScore's CLI still requires a healthy GUI runtime; when that process is unavailable, the WebSocket backend can talk to a compatible QML plugin running inside MuseScore. Install the optional dependency with `pip install -e '.[websocket]'`, enable either [`mcp-score`](https://github.com/tskovlund/mcp-score) or [`mcp-musescore`](https://github.com/ghchen99/mcp-musescore)'s plugin, and call `musescore_websocket_status` before sending commands. ScoreBridge does not bundle or copy either third-party project.
-
-After OMR import, call `review_create` to produce source-linked, measure-level tasks for the Agent. Each task carries the candidate notes, part/staff identity, source page and coordinates, neighboring measure context, and evidence paths. Put the Agent's accepted replacement in the task's `decision.patch`, with optional `confidence` and `rationale`, and call `review_apply`; the result keeps a decision log and reports invalid local edits while the complete score remains available for compilation.
-
-Call `score_finalize` after review to produce MusicXML, MSCZ, MIDI, and PDF together. The command performs a MuseScore round-trip and returns an instrument/part audit. Instrument metadata includes MusicXML `instrument-sound`, MIDI program, MIDI channel, clef, and transposition; an unknown OMR label is reported for Agent mapping rather than silently assigned the piano sound.
-
-For an Agent-facing one-call entry point, use `score_transcribe(input_path, output_dir)`. It runs `input_prepare → OMR → review_create` and returns paths to the evidence manifest, Score IR, and review tasks. Supplying `decisions_path` continues with `review_apply → score_finalize` and creates the editable/exported deliverables automatically. The canonical bridge PDF is always retained for image inputs; a single-page raster may also be used directly for OMR when the engine's raster path is more reliable.
-
-## Run the demo
-
-From the repository root:
+Call `score_transcribe(input_path, output_dir)` through MCP, or:
 
 ```bash
-uv venv
-uv pip install -e '.[test,mcp]'
-.venv/bin/python tests/make_fixture.py
-.venv/bin/scorebridge validate examples/vertical-slice.score.json
-.venv/bin/scorebridge compile examples/vertical-slice.score.json --output examples/vertical-slice.musicxml
+scorebridge prepare INPUT --output WORKDIR
 ```
 
-Then open `examples/vertical-slice.musicxml` or `examples/vertical-slice.mscz` in MuseScore. This fixture is intentionally small and demonstrates four instruments, a two-staff piano, a meter change, key changes, tempo, dynamics, and technique text.
+This prepares source-linked pages and returns `awaiting_agent`. The **calling
+multimodal Agent** now reads the images; the program does not secretly run OMR
+or invoke a second model. Original, rendered and enhanced images and their page
+mapping remain in the working directory. Filename sorting is a convenience;
+the Agent checks actual page order and identifies non-score pages.
+
+The Agent can keep a compact command plan instead of the legacy Score IR:
+
+```bash
+scorebridge execute-plan PLAN.json
+```
+
+The MCP equivalent is `musescore_execute_plan(input_path)`. It prevalidates step
+IDs, executes in order, and reports completed IDs and the failed step. It is not
+an atomic transaction. Inspect current editor state after a failure before
+continuing. `executed` means acknowledged commands, not completed transcription.
+Use `musescore_websocket_command` for individual supported operations.
+
+## MSCZ delivery
+
+`score_finalize` remains available for scores expressible in the legacy Score IR.
+It compiles internal MusicXML, creates MSCZ through MuseScore, and keeps temporary
+XML and structural audits under `.scorebridge/`. It no longer exports MIDI or PDF
+by default. Failed MSCZ export returns `error`; failed reopen conversion returns
+`incomplete`. The audit does not establish source accuracy or correct audible timbre.
+
+The legacy IR cannot represent all notation. Do not silently drop unsupported
+lyrics, slurs, articulations or performance semantics to make compilation pass.
+For these, extend the editor adapter or use a documented software-operation
+fallback and verify the actual saved score.
+
+## Optional OMR and developer tools
+
+Use `score_transcribe(..., mode="omr")` only to select the legacy
+Audiveris → MusicXML → Score IR → review route. `omr_run`, `review_create`, and
+`review_apply` remain available for that optional workflow. Agent-led jobs do
+not require a second recognition pass or human measure-by-measure review.
+
+`score_validate`, `score_compile`, `score_apply_patch`, `score_inspect`,
+`score_build_mscz`, and `musescore_convert` are lower-level developer tools;
+their intermediate files are not the default user delivery.
+
+## Tests
+
+```bash
+.venv/bin/pytest -q
+```
+
+Tests include a local WebSocket server for both wire formats, nested plugin
+errors, partial-plan failures without replay, input preparation without OMR,
+and compilation checks. These protocol tests are distinct from real MuseScore
+editing and listening tests.
 
 ## Demos
 
 `demos/image-to-score/` is reserved for a small image-to-editable-score walkthrough. `demos/pirates/` is reserved for a later multi-page orchestral case study, screenshots, and validation reports. The public Twinkle smoke run currently produces an evidence package, Audiveris MusicXML, Score IR, and MuseScore round-trip files under `demos/image-to-score/output/twinkle-run/`. Videos are intentionally added only after they are recorded; source PDFs and other copyrighted material do not belong in the public repository.
 
-## Product path
+## Next editor work
 
-1. Reliable Score IR and editor round trips
-2. MuseScore adapter with transactional editing and export
-3. PDF/image quality analysis and enhancement
-4. OMR/OCR fusion with source-linked review
-5. Sibelius and Cubase adapters
-6. Reproducible video demos under `demos/`
+Complete and verify create/open/save, instrument playback assignments, multi-voice
+entry, slurs/articulations/techniques, and layout through an actual MuseScore
+plugin. Then run the local orchestral regression. Sibelius support is future work.

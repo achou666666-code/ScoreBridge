@@ -4,6 +4,7 @@ from pathlib import Path
 import os
 import shutil
 import subprocess
+import tempfile
 from typing import Optional
 from zipfile import BadZipFile, ZipFile
 
@@ -29,6 +30,9 @@ class MuseScoreAdapter(MuseScoreBackend):
     name: str = "cli"
 
     def resolve(self) -> Optional[Path]:
+        if self.executable:
+            explicit = Path(self.executable)
+            return explicit if explicit.is_file() else None
         candidates = [self.executable] if self.executable else [os.environ.get("MUSESCORE_BIN")]
         candidates += [shutil.which("mscore"), shutil.which("MuseScore"), "/Applications/MuseScore 4.app/Contents/MacOS/mscore"]
         for candidate in candidates:
@@ -56,30 +60,30 @@ class MuseScoreAdapter(MuseScoreBackend):
             return False
 
     def convert(self, input_path: str, output_path: str) -> dict:
-        exe = self.resolve()
-        if not exe:
-            raise MuseScoreError(self.status()["hint"])
         src, dst = Path(input_path), Path(output_path)
         if not src.exists():
             raise MuseScoreError(f"Input does not exist: {src}")
+        exe = self.resolve()
+        if not exe:
+            raise MuseScoreError(self.status()["hint"])
         dst.parent.mkdir(parents=True, exist_ok=True)
         env = os.environ.copy()
         # MuseScore's macOS bundle ships only the cocoa Qt platform plugin.
         # Leave platform selection untouched unless the caller explicitly set it.
-        try:
-            proc = subprocess.run([str(exe), "-o", str(dst), str(src)], capture_output=True, text=True, timeout=self.timeout, env=env)
-        except subprocess.TimeoutExpired as exc:
-            raise MuseScoreError(f"MuseScore timed out after {self.timeout}s") from exc
-        result = {"command": [str(exe), "-o", str(dst), str(src)], "returncode": proc.returncode, "stdout": proc.stdout[-4000:], "stderr": proc.stderr[-4000:], "output_path": str(dst.resolve())}
-        output_valid = self._valid_output(dst)
-        if proc.returncode != 0 and output_valid:
-            result["warning"] = f"MuseScore exited with code {proc.returncode} after writing a valid output file"
+        # Generate into an empty location: an old valid destination must never
+        # turn a failed export into a false success. Publish only verified output.
+        with tempfile.TemporaryDirectory(prefix="scorebridge-", dir=dst.parent) as temporary:
+            generated = Path(temporary) / dst.name
+            try:
+                proc = subprocess.run([str(exe), "-o", str(generated), str(src.resolve())], capture_output=True, text=True, timeout=self.timeout, env=env)
+            except subprocess.TimeoutExpired as exc:
+                raise MuseScoreError(f"MuseScore timed out after {self.timeout}s") from exc
+            result = {"command": [str(exe), "-o", str(generated), str(src.resolve())], "returncode": proc.returncode, "stdout": proc.stdout[-4000:], "stderr": proc.stderr[-4000:], "output_path": str(dst.resolve())}
+            if not self._valid_output(generated):
+                detail = proc.stderr[-1000:].strip()
+                raise MuseScoreError(f"MuseScore conversion failed (code {proc.returncode}): {detail}")
+            if proc.returncode != 0:
+                result["warning"] = f"MuseScore exited with code {proc.returncode} after writing a valid output file"
+            generated.replace(dst)
             result["output_valid"] = True
             return result
-        if proc.returncode != 0 or not output_valid:
-            detail = proc.stderr[-1000:].strip()
-            if proc.returncode < 0:
-                detail = f"process terminated by signal {-proc.returncode}; {detail}"
-            raise MuseScoreError(f"MuseScore conversion failed (code {proc.returncode}): {detail}")
-        result["output_valid"] = True
-        return result
