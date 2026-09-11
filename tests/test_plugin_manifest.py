@@ -8,3 +8,9 @@ def test_bundled_plugin_exposes_save_command():
     assert 'cmd("file-save")' in text
     assert 'case "getCapabilities":' in text
     assert '"getCapabilities", "getScore"' in text
+    assert 'case "createScore":' in text
+    assert 'case "openScore":' in text
+    assert 'case "saveAs":' in text
+    assert 'newScore(params.title, params.instrumentId, params.measures)' in text
+    assert 'readScore(params.path)' in text
+    assert 'writeScore(curScore, params.path, "mscz")' in text

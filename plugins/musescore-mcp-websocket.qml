@@ -44,6 +44,9 @@ MuseScore {
             // Core operations
             case "getScore":                return getScore(command.params);
             case "getCapabilities":         return getCapabilities();
+            case "createScore":             return createScore(command.params);
+            case "openScore":               return openScore(command.params);
+            case "saveAs":                  return saveScoreAs(command.params);
             case "syncStateToSelection":    return syncStateToSelection();
             case "ping":                    return "pong";
             case "undo":                    return undo();
@@ -277,11 +280,52 @@ MuseScore {
         }
     }
 
+    function createScore(params) {
+        var validation = validateParams(params, ["title", "instrumentId", "measures"]);
+        if (!validation.valid) return validation;
+        if (params.measures < 1) return { error: "measures must be at least 1" };
+        try {
+            var score = newScore(params.title, params.instrumentId, params.measures);
+            if (!score) return { error: "MuseScore did not create a score" };
+            initCursorState();
+            return { success: true, message: "Score created", title: params.title };
+        } catch (e) {
+            return { error: e.toString() };
+        }
+    }
+
+    function openScore(params) {
+        var validation = validateParams(params, ["path"]);
+        if (!validation.valid) return validation;
+        try {
+            var score = readScore(params.path);
+            if (!score) return { error: "MuseScore could not open " + params.path };
+            initCursorState();
+            return { success: true, message: "Score opened", path: params.path };
+        } catch (e) {
+            return { error: e.toString() };
+        }
+    }
+
+    function saveScoreAs(params) {
+        var validation = validateParams(params, ["path"]);
+        if (!validation.valid) return validation;
+        if (!curScore) return { error: "No score open" };
+        try {
+            var ok = writeScore(curScore, params.path, "mscz");
+            if (ok === false) return { error: "MuseScore could not save " + params.path };
+            return { success: true, message: "Score saved as MSCZ", path: params.path };
+        } catch (e) {
+            return { error: e.toString() };
+        }
+    }
+
     function getCapabilities() {
         return {
             pluginVersion: version,
             commands: [
-                "ping", "getCapabilities", "getScore", "save", "undo",
+                "ping", "getCapabilities", "getScore", "createScore",
+                "openScore", "saveAs", "save", "undo",
                 "goToBeginningOfScore", "getCursorInfo", "goToMeasure",
                 "goToFinalMeasure", "nextElement", "prevElement",
                 "nextStaff", "prevStaff", "selectCurrentMeasure",
@@ -309,7 +353,8 @@ MuseScore {
         if (!params.sequence) return { error: "No sequence specified" };
 
         var validCommands = [
-            "getCapabilities", "getScore", "addNote", "addRest", "addTuplet", "appendMeasure", "deleteSelection",
+            "getCapabilities", "getScore", "createScore", "openScore", "saveAs",
+            "addNote", "addRest", "addTuplet", "appendMeasure", "deleteSelection",
             "getCursorInfo", "goToMeasure", "nextElement", "prevElement", "nextStaff", "prevStaff", "save",
             "selectCurrentMeasure", "processSequence", "insertMeasure", "goToFinalMeasure",
             "goToBeginningOfScore", "setTimeSignature", "addLyrics", "addInstrument",    
