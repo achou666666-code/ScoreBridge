@@ -11,6 +11,27 @@ def test_invalid_explicit_executable_does_not_fall_back(tmp_path):
     assert MuseScoreAdapter(executable=str(tmp_path / 'missing')).resolve() is None
 
 
+def test_open_score_checks_input_before_launch(tmp_path):
+    adapter = MuseScoreAdapter(executable="/bin/true")
+    with pytest.raises(MuseScoreError, match="Input does not exist"):
+        adapter.open_score(str(tmp_path / "missing.mscz"))
+
+
+def test_open_score_reports_process(monkeypatch, tmp_path):
+    import subprocess
+    source = tmp_path / "source.mscz"
+    source.write_bytes(b"score")
+    class Process:
+        pid = 4242
+    monkeypatch.setattr(subprocess, "Popen", lambda *a, **k: Process())
+    adapter = MuseScoreAdapter(executable="/bin/true")
+    monkeypatch.setattr(adapter, "resolve", lambda: source)
+    result = adapter.open_score(str(source))
+    assert result["status"] == "pass"
+    assert result["pid"] == 4242
+    assert result["command"][-1] == str(source.resolve())
+
+
 def test_failed_conversion_cannot_reuse_old_output(tmp_path, monkeypatch):
     import subprocess
     from zipfile import ZipFile

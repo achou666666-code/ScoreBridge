@@ -65,6 +65,14 @@ def musescore_status() -> dict:
     return MuseScoreAdapter().status()
 
 @mcp.tool()
+def musescore_open(input_path: str, executable: str = "") -> dict:
+    """Open an existing MSCZ or MusicXML file in MuseScore."""
+    try:
+        return MuseScoreAdapter(executable=executable or None).open_score(input_path)
+    except (MuseScoreError, OSError) as exc:
+        return {"status": "error", "error": str(exc)}
+
+@mcp.tool()
 def musescore_convert(input_path: str, output_path: str, executable: str = "") -> dict:
     """Convert MusicXML or MSCZ through MuseScore's command line exporter."""
     try:

@@ -69,6 +69,11 @@ for MuseScore 4.7.4. The lifecycle command names are reserved and return a clear
 unsupported result until a version-tested implementation is available; ScoreBridge
 does not claim those operations succeeded.
 
+`musescore_open` is the supported path-opening helper for an existing MSCZ or
+MusicXML file. It launches MuseScore with that file and returns the process id;
+the Agent should then wait for `musescore_websocket_status` to confirm the plugin
+before sending edits. Creating a blank score and Save As remain version-dependent.
+
 ## Agent entry point
 
 Call `score_transcribe(input_path, output_dir)` through MCP, or:

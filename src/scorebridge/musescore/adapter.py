@@ -45,6 +45,30 @@ class MuseScoreAdapter(MuseScoreBackend):
         return {"available": bool(exe), "executable": str(exe) if exe else None, "backend": "cli" if exe else None,
                 "hint": None if exe else "Install MuseScore 4 or set MUSESCORE_BIN."}
 
+    def open_score(self, input_path: str) -> dict:
+        """Launch MuseScore with an existing score file.
+
+        MuseScore's CLI reliably accepts a score path, while creation and
+        Save-As are version-dependent. Keep this operation explicit and return
+        the process id so callers can verify the live editor separately.
+        """
+        src = Path(input_path)
+        if not src.is_file():
+            raise MuseScoreError(f"Input does not exist: {src}")
+        exe = self.resolve()
+        if not exe:
+            raise MuseScoreError(self.status()["hint"])
+        try:
+            process = subprocess.Popen([str(exe), str(src.resolve())],
+                                       stdout=subprocess.DEVNULL,
+                                       stderr=subprocess.DEVNULL,
+                                       env=os.environ.copy())
+        except OSError as exc:
+            raise MuseScoreError(f"MuseScore could not be launched: {exc}") from exc
+        return {"status": "pass", "input_path": str(src.resolve()),
+                "executable": str(exe), "pid": process.pid,
+                "command": [str(exe), str(src.resolve())]}
+
     @staticmethod
     def _valid_output(path: Path) -> bool:
         if not path.is_file() or path.stat().st_size == 0:
