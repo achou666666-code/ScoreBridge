@@ -13,6 +13,9 @@ ordered batches with stable IDs:
 These example actions target mcp-score and assume the correct score/staff is open.
 The bundled action-protocol plugin supports `save`, which saves the currently
 open document to its existing MuseScore path.
+`addDynamic` is present in the bundled implementation but stays reserved until
+it passes a clean MuseScore-version smoke test; plans must not treat a reserved
+command as acknowledged editor work.
 Read the installed plugin's parameters before writing. Do not assume command names
 or duration conventions are interchangeable across plugins.
 

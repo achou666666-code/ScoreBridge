@@ -76,3 +76,16 @@ def test_status_reads_capabilities_without_executing_save(monkeypatch):
     assert report["capabilities"]["save"] is True
     assert report["capabilities"]["reserved_commands"] == ["createScore"]
     assert calls == ["ping", "getCapabilities"]
+
+
+def test_status_preserves_reserved_dynamic_command(monkeypatch):
+    backend = MuseScoreWebSocketBackend()
+    def command(action, params=None):
+        backend.negotiated_protocol = "action"
+        if action == "ping":
+            return {"result": "pong"}
+        return {"result": {"pluginVersion": "2.0", "commands": ["getScore"],
+                               "reserved_commands": ["addDynamic"]}}
+    monkeypatch.setattr(backend, "command", command)
+    report = backend.status()
+    assert report["capabilities"]["reserved_commands"] == ["addDynamic"]
