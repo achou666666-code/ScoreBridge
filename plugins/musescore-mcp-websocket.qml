@@ -330,7 +330,7 @@ MuseScore {
         if (!params.sequence) return { error: "No sequence specified" };
 
         var validCommands = [
-            "getCapabilities", "getScore", "createScore", "openScore", "saveAs",
+            "getCapabilities", "getScore",
             "addNote", "addRest", "addTuplet", "appendMeasure", "deleteSelection",
             "getCursorInfo", "goToMeasure", "nextElement", "prevElement", "nextStaff", "prevStaff", "save",
             "selectCurrentMeasure", "processSequence", "insertMeasure", "goToFinalMeasure",
