@@ -48,6 +48,7 @@ MuseScore {
             case "undo":                    return undo();
             case "goToBeginningOfScore":    return goToBeginningOfScore();
             case "processSequence":         return processSequence(command.params);
+            case "save":                     return saveScore();
 
             // Navigation
             case "getCursorInfo":           return getCursorInfo(command.params);
@@ -265,6 +266,16 @@ MuseScore {
         });
     }
 
+    function saveScore() {
+        if (!curScore) return { error: "No score open" };
+        try {
+            cmd("file-save");
+            return { success: true, message: "Current score saved" };
+        } catch (e) {
+            return { error: e.toString() };
+        }
+    }
+
     function goToBeginningOfScore() {
         var response = initCursorState();
         return { 
@@ -281,7 +292,7 @@ MuseScore {
 
         var validCommands = [
             "getScore", "addNote", "addRest", "addTuplet", "appendMeasure", "deleteSelection",
-            "getCursorInfo", "goToMeasure", "nextElement", "prevElement", "nextStaff", "prevStaff",
+            "getCursorInfo", "goToMeasure", "nextElement", "prevElement", "nextStaff", "prevStaff", "save",
             "selectCurrentMeasure", "processSequence", "insertMeasure", "goToFinalMeasure",
             "goToBeginningOfScore", "setTimeSignature", "addLyrics", "addInstrument",    
             "setStaffMute", "setInstrumentSound", "setTempo"

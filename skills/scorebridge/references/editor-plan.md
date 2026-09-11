@@ -11,6 +11,8 @@ ordered batches with stable IDs:
 ```
 
 These example actions target mcp-score and assume the correct score/staff is open.
+The bundled action-protocol plugin supports `save`, which saves the currently
+open document to its existing MuseScore path.
 Read the installed plugin's parameters before writing. Do not assume command names
 or duration conventions are interchangeable across plugins.
 
@@ -22,7 +24,7 @@ The two locally inspected upstream plugin implementations differ:
 | Plugin | Wire key | Implemented examples | Missing or misleading operations |
 | --- | --- | --- | --- |
 | mcp-score | `command` | notes, keys, meter, tempo, dynamics, chord symbols, repeats, staff navigation, sequences | No create/open/save, instrument management, lyrics, slurs or layout commands in inspected dispatcher; voice fixed to 0 |
-| mcp-musescore style API Server | `action` | notes, rests, tuplets, lyrics, append instrument, meter, tempo | `setInstrumentSound` opens a dialog only; `setStaffMute` changes visibility; no create/open/save or key command in inspected dispatcher |
+| mcp-musescore style API Server | `action` | notes, rests, tuplets, lyrics, append instrument, meter, tempo, save (bundled plugin) | `setInstrumentSound` opens a dialog only; `setStaffMute` changes visibility; no create/open or key command in inspected dispatcher |
 
 This table describes inspected source, not every release or a live capability guarantee.
 There is no universal capability discovery command. The status tool reports the
