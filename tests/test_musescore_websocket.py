@@ -30,6 +30,7 @@ def test_real_socket_negotiates_protocol_and_propagates_error(wire_key):
         thread = threading.Thread(target=server.serve_forever, daemon=True); thread.start()
         bridge = MuseScoreWebSocketBackend(url=f'ws://127.0.0.1:{server.socket.getsockname()[1]}', timeout=2)
         assert bridge.status()['protocol'] == wire_key
+        writes.clear()
         with pytest.raises(MuseScoreWebSocketError, match='No score open'):
             bridge.command('addNote', {'pitch': 60})
         assert writes == ['addNote']
@@ -40,3 +41,20 @@ def test_real_socket_negotiates_protocol_and_propagates_error(wire_key):
 def test_plugin_failures_are_not_success(reply):
     with pytest.raises(MuseScoreWebSocketError):
         MuseScoreWebSocketBackend._check_response(reply)
+
+
+def test_status_reports_missing_command_without_marking_connection_down(monkeypatch):
+    backend = MuseScoreWebSocketBackend()
+    calls = []
+    def command(action, params=None):
+        calls.append(action)
+        if action == "ping":
+            backend.negotiated_protocol = "action"
+            return {"result": "pong"}
+        raise MuseScoreWebSocketError("Plugin rejected command: Unknown command: save")
+    monkeypatch.setattr(backend, "command", command)
+    report = backend.status()
+    assert report["available"] is True
+    assert report["capabilities"]["ping"] is True
+    assert report["capabilities"]["save"] is False
+    assert calls == ["ping", "getScore", "save"]
