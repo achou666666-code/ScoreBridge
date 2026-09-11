@@ -11,3 +11,21 @@ def test_common_instrument_aliases_resolve_to_playback_metadata():
 
 def test_unknown_instrument_does_not_silently_fallback_to_piano():
     assert instrument_spec("celesta-like mystery") == {}
+
+
+def test_cli_instrument_audit(tmp_path, monkeypatch, capsys):
+    from scorebridge.score_ir import Score, Part, Staff, Measure, save_score
+    from scorebridge.cli import main
+    score_path = tmp_path / "score.json"
+    score = Score(title="Audit", pitch_mode="written", parts=[
+        Part(id="p1", name="Flute", instrument_id="Flute", staves=[Staff(id="s1", measures=[Measure(number=1)])])
+    ])
+    save_score(score, score_path)
+    monkeypatch.setattr("sys.argv", ["scorebridge", "instrument-audit", str(score_path)])
+    try:
+        main()
+    except SystemExit as exc:
+        assert exc.code == 0
+    report = __import__("json").loads(capsys.readouterr().out)
+    assert report["status"] == "pass"
+    assert report["parts"][0]["midi_program"] == 74
