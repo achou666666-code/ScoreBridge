@@ -69,9 +69,10 @@ def test_status_reads_capabilities_without_executing_save(monkeypatch):
         backend.negotiated_protocol = "action"
         if action == "ping":
             return {"result": "pong"}
-        return {"result": {"pluginVersion": "2.0", "commands": ["getScore", "save"]}}
+        return {"result": {"pluginVersion": "2.0", "commands": ["getScore", "save"], "reserved_commands": ["createScore"]}}
     monkeypatch.setattr(backend, "command", command)
     report = backend.status()
     assert report["capabilities"]["getScore"] is True
     assert report["capabilities"]["save"] is True
+    assert report["capabilities"]["reserved_commands"] == ["createScore"]
     assert calls == ["ping", "getCapabilities"]

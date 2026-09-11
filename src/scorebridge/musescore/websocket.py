@@ -81,10 +81,12 @@ class MuseScoreWebSocketBackend:
                 capability_response = self.command("getCapabilities")
                 capability_result = capability_response.get("result", {})
                 commands = capability_result.get("commands", [])
+                reserved_commands = capability_result.get("reserved_commands", [])
                 capabilities.update({
                     "getCapabilities": True,
                     "pluginVersion": capability_result.get("pluginVersion"),
                     "commands": commands,
+                    "reserved_commands": reserved_commands,
                     "getScore": "getScore" in commands,
                     "save": "save" in commands,
                 })
