@@ -37,6 +37,17 @@ Python executable and the absolute path to `mcp_server/server.py`:
 .venv/bin/python mcp_server/server.py
 ```
 
+The compatible MuseScore QML plugin is included in `plugins/`. On macOS,
+install it with:
+
+```bash
+bash scripts/install_musescore_plugin.sh
+```
+
+Then open a score in MuseScore and choose `Plugins > musescore-mcp-websocket`.
+Leave the plugin running while ScoreBridge sends editing commands. Verify the
+live connection with `.venv/bin/scorebridge editor-status`.
+
 ScoreBridge provides a client for external MuseScore plugins, not a bundled
 editor plugin. Inspected implementations of
 [mcp-score](https://github.com/tskovlund/mcp-score) and
