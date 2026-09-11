@@ -74,6 +74,9 @@ MusicXML file. It launches MuseScore with that file and returns the process id;
 the Agent should then wait for `musescore_websocket_status` to confirm the plugin
 before sending edits. Creating a blank score and Save As remain version-dependent.
 The same operation is available locally as `scorebridge open-score INPUT`.
+Before exporting or editing playback, call `score_instrument_audit` on the
+internal score plan. It reports unresolved IDs and detects an accidental piano
+fallback; a part label alone is not evidence of a correct playback sound.
 
 ## Agent entry point
 

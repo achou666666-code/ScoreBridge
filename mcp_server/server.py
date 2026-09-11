@@ -15,6 +15,7 @@ from scorebridge.review import create_review_packet, apply_review
 from scorebridge.finalize import finalize_score
 from scorebridge.workflow import transcribe_score
 from scorebridge.doctor import diagnose
+from scorebridge.instruments import instrument_spec
 from scorebridge.agent_workflow import prepare_agent_job, execute_plan_file
 
 try:
@@ -47,6 +48,28 @@ def score_inspect(input_path: str) -> dict:
     """Return the score title, pitch mode, parts, staves and measure counts."""
     score=load_score(input_path)
     return {"title":score.title,"pitch_mode":score.pitch_mode,"parts":[{"id":p.id,"name":p.name,"instrument_id":p.instrument_id,"staves":len(p.staves),"measures":[len(s.measures) for s in p.staves]} for p in score.parts]}
+
+@mcp.tool()
+def score_instrument_audit(input_path: str) -> dict:
+    """Audit every part's instrument mapping before MuseScore export."""
+    score = load_score(input_path)
+    parts = []
+    unresolved = []
+    for part in score.parts:
+        spec = instrument_spec(part.instrument_id)
+        item = {"id": part.id, "name": part.name,
+                "instrument_id": part.instrument_id,
+                "mapped": bool(spec),
+                "instrument_sound": spec.get("instrument_sound"),
+                "midi_program": spec.get("midi_program")}
+        parts.append(item)
+        if not spec:
+            unresolved.append(part.instrument_id)
+    return {"status": "pass" if not unresolved else "needs_review",
+            "parts": parts, "unresolved_instrument_ids": unresolved,
+            "piano_fallback_detected": any(
+                item["instrument_id"] != "keyboard.piano" and
+                item["instrument_sound"] == "keyboard.piano" for item in parts)}
 
 @mcp.tool()
 def score_apply_patch(input_path: str, patch: dict, output_path: str = "") -> dict:
