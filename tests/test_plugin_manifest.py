@@ -17,6 +17,8 @@ def test_bundled_plugin_exposes_save_command():
     assert 'setStaffMute is not implemented' in text
     assert 'setInstrumentSound is not implemented' in text
     assert 'case "setStaffVisible":' in text
+    assert 'case "addDynamic":' in text
+    assert 'reserved_commands: ["createScore", "openScore", "saveAs", "addDynamic",' in text
     assert 'reserved_commands: ["createScore", "openScore", "saveAs",' in text
     sequence_block = text.split('function processSequence(params)', 1)[1].split('try {', 1)[0]
     assert '"createScore"' not in sequence_block

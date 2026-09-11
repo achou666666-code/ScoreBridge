@@ -72,6 +72,7 @@ MuseScore {
             case "addRest":                 return addRest(command.params);
             case "addTuplet":               return addTuplet(command.params);
             case "addLyrics":               return addLyrics(command.params);
+            case "addDynamic":              return addDynamic(command.params);
 
             // Measures
             case "appendMeasure":           return appendMeasure(command.params);
@@ -310,7 +311,7 @@ MuseScore {
                 "insertMeasure", "deleteSelection", "addInstrument",
                 "setTimeSignature", "setTempo", "setStaffVisible"
             ],
-            reserved_commands: ["createScore", "openScore", "saveAs",
+            reserved_commands: ["createScore", "openScore", "saveAs", "addDynamic",
                                 "setStaffMute", "setInstrumentSound"]
         };
     }
@@ -335,7 +336,7 @@ MuseScore {
             "getCursorInfo", "goToMeasure", "nextElement", "prevElement", "nextStaff", "prevStaff", "save",
             "selectCurrentMeasure", "processSequence", "insertMeasure", "goToFinalMeasure",
             "goToBeginningOfScore", "setTimeSignature", "addLyrics", "addInstrument",    
-            "setStaffVisible", "setTempo"
+            "addDynamic", "setStaffVisible", "setTempo"
         ];
 
         try {
@@ -952,6 +953,21 @@ MuseScore {
                 remainingLyrics: lyricsArray,
                 currentSelection: selectionState
             };
+        });
+    }
+
+    function addDynamic(params) {
+        var validation = validateParams(params, ["type"]);
+        if (!validation.valid) return validation;
+        var allowed = ["ppp", "pp", "p", "mp", "mf", "f", "ff", "fff", "sfz", "fp", "rfz"];
+        if (allowed.indexOf(params.type) < 0) return { error: "Unsupported dynamic: " + params.type };
+        return executeWithUndo(function() {
+            syncStateToSelection();
+            var cursor = createCursor({ startTick: selectionState.startTick, startStaff: selectionState.startStaff });
+            var dynamic = newElement(Element.DYNAMIC);
+            dynamic.text = params.type;
+            cursor.add(dynamic);
+            return { success: true, message: "Dynamic " + params.type + " added", currentSelection: selectionState };
         });
     }
 

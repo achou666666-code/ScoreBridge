@@ -77,6 +77,8 @@ The same operation is available locally as `scorebridge open-score INPUT`.
 Before exporting or editing playback, call `score_instrument_audit` on the
 internal score plan. It reports unresolved IDs and detects an accidental piano
 fallback; a part label alone is not evidence of a correct playback sound.
+`addDynamic` is implemented in the bundled editor but remains reserved until a
+clean MuseScore restart verifies dynamic-element insertion on the target version.
 
 ## Agent entry point
 
