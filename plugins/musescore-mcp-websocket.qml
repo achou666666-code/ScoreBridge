@@ -43,6 +43,7 @@ MuseScore {
         switch(command.action) {
             // Core operations
             case "getScore":                return getScore(command.params);
+            case "getCapabilities":         return getCapabilities();
             case "syncStateToSelection":    return syncStateToSelection();
             case "ping":                    return "pong";
             case "undo":                    return undo();
@@ -274,6 +275,23 @@ MuseScore {
         } catch (e) {
             return { error: e.toString() };
         }
+    }
+
+    function getCapabilities() {
+        return {
+            pluginVersion: version,
+            commands: [
+                "ping", "getCapabilities", "getScore", "save", "undo",
+                "goToBeginningOfScore", "getCursorInfo", "goToMeasure",
+                "goToFinalMeasure", "nextElement", "prevElement",
+                "nextStaff", "prevStaff", "selectCurrentMeasure",
+                "selectCustomRange", "processSequence", "addNote",
+                "addRest", "addTuplet", "addLyrics", "appendMeasure",
+                "insertMeasure", "deleteSelection", "addInstrument",
+                "setTimeSignature", "setTempo", "setStaffMute",
+                "setInstrumentSound"
+            ]
+        };
     }
 
     function goToBeginningOfScore() {

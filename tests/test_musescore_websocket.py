@@ -51,10 +51,27 @@ def test_status_reports_missing_command_without_marking_connection_down(monkeypa
         if action == "ping":
             backend.negotiated_protocol = "action"
             return {"result": "pong"}
-        raise MuseScoreWebSocketError("Plugin rejected command: Unknown command: save")
+        raise MuseScoreWebSocketError("Plugin rejected command: Unknown command: getCapabilities")
     monkeypatch.setattr(backend, "command", command)
     report = backend.status()
     assert report["available"] is True
     assert report["capabilities"]["ping"] is True
-    assert report["capabilities"]["save"] is False
-    assert calls == ["ping", "getScore", "save"]
+    assert report["capabilities"]["getCapabilities"] is False
+    assert report["capabilities"]["save"] is None
+    assert calls == ["ping", "getCapabilities"]
+
+
+def test_status_reads_capabilities_without_executing_save(monkeypatch):
+    backend = MuseScoreWebSocketBackend()
+    calls = []
+    def command(action, params=None):
+        calls.append(action)
+        backend.negotiated_protocol = "action"
+        if action == "ping":
+            return {"result": "pong"}
+        return {"result": {"pluginVersion": "2.0", "commands": ["getScore", "save"]}}
+    monkeypatch.setattr(backend, "command", command)
+    report = backend.status()
+    assert report["capabilities"]["getScore"] is True
+    assert report["capabilities"]["save"] is True
+    assert calls == ["ping", "getCapabilities"]

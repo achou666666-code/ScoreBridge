@@ -77,14 +77,25 @@ class MuseScoreWebSocketBackend:
             if result.get("result") != "pong":
                 raise MuseScoreWebSocketError(f"Unexpected ping response: {result}")
             capabilities = {"ping": True}
-            for action in ("getScore", "save"):
-                try:
-                    self.command(action)
-                    capabilities[action] = True
-                except MuseScoreWebSocketError as exc:
-                    message = str(exc)
-                    capabilities[action] = not "Unknown command" in message
-                    capabilities[f"{action}_error"] = message
+            try:
+                capability_response = self.command("getCapabilities")
+                capability_result = capability_response.get("result", {})
+                commands = capability_result.get("commands", [])
+                capabilities.update({
+                    "getCapabilities": True,
+                    "pluginVersion": capability_result.get("pluginVersion"),
+                    "commands": commands,
+                    "getScore": "getScore" in commands,
+                    "save": "save" in commands,
+                })
+            except MuseScoreWebSocketError as exc:
+                capabilities.update({
+                    "getCapabilities": False,
+                    "getScore": None,
+                    "save": None,
+                    "error": str(exc),
+                    "hint": "Restart MuseScore and enable the bundled ScoreBridge plugin.",
+                })
             return {"available": True, "backend": self.name, "url": self.url,
                     "protocol": self.negotiated_protocol, "capabilities": capabilities,
                     "response": result}
