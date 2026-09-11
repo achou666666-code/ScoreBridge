@@ -73,6 +73,7 @@ does not claim those operations succeeded.
 MusicXML file. It launches MuseScore with that file and returns the process id;
 the Agent should then wait for `musescore_websocket_status` to confirm the plugin
 before sending edits. Creating a blank score and Save As remain version-dependent.
+The same operation is available locally as `scorebridge open-score INPUT`.
 
 ## Agent entry point
 

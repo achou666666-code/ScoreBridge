@@ -12,6 +12,9 @@ def main():
     prepare=sub.add_parser("prepare"); prepare.add_argument("input"); prepare.add_argument("--output", required=True)
     prepare.add_argument("--dpi", type=int, default=450)
     sub.add_parser("editor-status")
+    open_score = sub.add_parser("open-score")
+    open_score.add_argument("input")
+    open_score.add_argument("--executable", default="")
     execute=sub.add_parser("execute-plan"); execute.add_argument("input"); execute.add_argument("--url", default="")
     validate=sub.add_parser("validate"); validate.add_argument("input")
     compile_cmd=sub.add_parser("compile"); compile_cmd.add_argument("input"); compile_cmd.add_argument("--output", required=True)
@@ -25,6 +28,14 @@ def main():
         from .musescore import MuseScoreWebSocketBackend
         report = MuseScoreWebSocketBackend().status()
         print(json.dumps(report, ensure_ascii=False, indent=2)); raise SystemExit(0 if report["available"] else 1)
+    if args.command == "open-score":
+        from .musescore import MuseScoreAdapter, MuseScoreError
+        try:
+            report = MuseScoreAdapter(executable=args.executable or None).open_score(args.input)
+        except MuseScoreError as exc:
+            print(json.dumps({"status": "error", "error": str(exc)}, ensure_ascii=False, indent=2))
+            raise SystemExit(1)
+        print(json.dumps(report, ensure_ascii=False, indent=2)); return
     if args.command == "execute-plan":
         from .agent_workflow import execute_plan_file
         report = execute_plan_file(args.input, args.url)
