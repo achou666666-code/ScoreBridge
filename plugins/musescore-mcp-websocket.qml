@@ -81,6 +81,7 @@ MuseScore {
             // Staff & Instruments
             case "addInstrument":           return addInstrument(command.params);
             case "setStaffMute":            return setStaffMute(command.params);
+            case "setStaffVisible":         return setStaffVisible(command.params);
             case "setInstrumentSound":      return setInstrumentSound(command.params);
             case "setTimeSignature":        return setTimeSignature(command.params);
             case "setTempo":                return setTempo(command.params);
@@ -300,17 +301,17 @@ MuseScore {
         return {
             pluginVersion: version,
             commands: [
-                "ping", "getCapabilities", "getScore", "createScore",
-                "openScore", "saveAs", "save", "undo",
+                "ping", "getCapabilities", "getScore", "save", "undo",
                 "goToBeginningOfScore", "getCursorInfo", "goToMeasure",
                 "goToFinalMeasure", "nextElement", "prevElement",
                 "nextStaff", "prevStaff", "selectCurrentMeasure",
                 "selectCustomRange", "processSequence", "addNote",
                 "addRest", "addTuplet", "addLyrics", "appendMeasure",
                 "insertMeasure", "deleteSelection", "addInstrument",
-                "setTimeSignature", "setTempo", "setStaffMute",
-                "setInstrumentSound"
-            ]
+                "setTimeSignature", "setTempo", "setStaffVisible"
+            ],
+            reserved_commands: ["createScore", "openScore", "saveAs",
+                                "setStaffMute", "setInstrumentSound"]
         };
     }
 
@@ -334,7 +335,7 @@ MuseScore {
             "getCursorInfo", "goToMeasure", "nextElement", "prevElement", "nextStaff", "prevStaff", "save",
             "selectCurrentMeasure", "processSequence", "insertMeasure", "goToFinalMeasure",
             "goToBeginningOfScore", "setTimeSignature", "addLyrics", "addInstrument",    
-            "setStaffMute", "setInstrumentSound", "setTempo"
+            "setStaffVisible", "setTempo"
         ];
 
         try {
@@ -1018,6 +1019,8 @@ MuseScore {
     }
 
     function setStaffMute(params) {
+        return { error: "setStaffMute is not implemented; use setStaffVisible for engraving visibility" };
+        /*
         var validation = validateParams(params, ["staff"]);
         if (!validation.valid) return validation;
         
@@ -1032,9 +1035,24 @@ MuseScore {
                 return { error: "Staff not found" };
             }
         });
+        */
+    }
+
+    function setStaffVisible(params) {
+        var validation = validateParams(params, ["staff", "visible"]);
+        if (!validation.valid) return validation;
+        return executeWithUndo(function() {
+            var staff = curScore.staves && curScore.staves[params.staff] ||
+                       (typeof curScore.staff === "function" ? curScore.staff(params.staff) : null);
+            if (!staff) return { error: "Staff not found" };
+            staff.invisible = !Boolean(params.visible);
+            return { success: true, message: "Staff visibility updated" };
+        });
     }
 
     function setInstrumentSound(params) {
+        return { error: "setInstrumentSound is not implemented for MuseScore 4.7.4" };
+        /*
         var validation = validateParams(params, ["staff", "instrumentId"]);
         if (!validation.valid) return validation;
         
@@ -1042,6 +1060,7 @@ MuseScore {
             cmd("instruments");
             return { success: true, message: "Instrument dialog opened, manual selection required" };
         });
+        */
     }
 
     function setTimeSignature(params) {

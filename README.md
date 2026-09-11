@@ -58,6 +58,10 @@ Protocol detection uses read-only ping; `SCOREBRIDGE_MUSESCORE_PROTOCOL` can for
 `action` or `command`. No mutation is automatically retried after a timeout.
 `scorebridge editor-status` reads the plugin's declared command list without
 editing the score. Restart MuseScore after updating the plugin so QML is reloaded.
+The status response separates verified `commands` from `reserved_commands` that
+are intentionally unavailable on MuseScore 4.7.4.
+Playback mute and direct sound assignment are reserved until they can be verified.
+`setStaffVisible` controls engraving visibility and is never reported as audio mute.
 
 The current live bridge edits and saves an already-open score. New-score creation,
 opening a path, Save As, and automatic instrument sound assignment remain pending

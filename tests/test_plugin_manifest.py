@@ -14,3 +14,7 @@ def test_bundled_plugin_exposes_save_command():
     assert 'createScore is not verified for MuseScore 4.7.4' in text
     assert 'openScore is not verified for MuseScore 4.7.4' in text
     assert 'saveAs is not verified for MuseScore 4.7.4' in text
+    assert 'setStaffMute is not implemented' in text
+    assert 'setInstrumentSound is not implemented' in text
+    assert 'case "setStaffVisible":' in text
+    assert 'reserved_commands: ["createScore", "openScore", "saveAs",' in text
