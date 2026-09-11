@@ -281,43 +281,19 @@ MuseScore {
     }
 
     function createScore(params) {
-        var validation = validateParams(params, ["title", "instrumentId", "measures"]);
-        if (!validation.valid) return validation;
-        if (params.measures < 1) return { error: "measures must be at least 1" };
-        try {
-            var score = newScore(params.title, params.instrumentId, params.measures);
-            if (!score) return { error: "MuseScore did not create a score" };
-            initCursorState();
-            return { success: true, message: "Score created", title: params.title };
-        } catch (e) {
-            return { error: e.toString() };
-        }
+        return { error: "createScore is not verified for MuseScore 4.7.4; open a score first" };
     }
 
     function openScore(params) {
         var validation = validateParams(params, ["path"]);
         if (!validation.valid) return validation;
-        try {
-            var score = readScore(params.path);
-            if (!score) return { error: "MuseScore could not open " + params.path };
-            initCursorState();
-            return { success: true, message: "Score opened", path: params.path };
-        } catch (e) {
-            return { error: e.toString() };
-        }
+        return { error: "openScore is not verified for MuseScore 4.7.4; open the file in MuseScore first" };
     }
 
     function saveScoreAs(params) {
         var validation = validateParams(params, ["path"]);
         if (!validation.valid) return validation;
-        if (!curScore) return { error: "No score open" };
-        try {
-            var ok = writeScore(curScore, params.path, "mscz");
-            if (ok === false) return { error: "MuseScore could not save " + params.path };
-            return { success: true, message: "Score saved as MSCZ", path: params.path };
-        } catch (e) {
-            return { error: e.toString() };
-        }
+        return { error: "saveAs is not verified for MuseScore 4.7.4; use save on the open score" };
     }
 
     function getCapabilities() {

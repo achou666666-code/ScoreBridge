@@ -60,9 +60,10 @@ Protocol detection uses read-only ping; `SCOREBRIDGE_MUSESCORE_PROTOCOL` can for
 editing the score. Restart MuseScore after updating the plugin so QML is reloaded.
 
 The current live bridge edits and saves an already-open score. New-score creation,
-opening a path, Save As, and automatic instrument sound assignment remain pending;
-ScoreBridge reports the available commands rather than claiming those operations
-succeeded.
+opening a path, Save As, and automatic instrument sound assignment remain pending
+for MuseScore 4.7.4. The lifecycle command names are reserved and return a clear
+unsupported result until a version-tested implementation is available; ScoreBridge
+does not claim those operations succeeded.
 
 ## Agent entry point
 

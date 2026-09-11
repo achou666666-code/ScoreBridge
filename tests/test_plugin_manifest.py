@@ -11,6 +11,6 @@ def test_bundled_plugin_exposes_save_command():
     assert 'case "createScore":' in text
     assert 'case "openScore":' in text
     assert 'case "saveAs":' in text
-    assert 'newScore(params.title, params.instrumentId, params.measures)' in text
-    assert 'readScore(params.path)' in text
-    assert 'writeScore(curScore, params.path, "mscz")' in text
+    assert 'createScore is not verified for MuseScore 4.7.4' in text
+    assert 'openScore is not verified for MuseScore 4.7.4' in text
+    assert 'saveAs is not verified for MuseScore 4.7.4' in text
