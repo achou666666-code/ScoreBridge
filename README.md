@@ -48,14 +48,21 @@ Then open a score in MuseScore and choose `Plugins > musescore-mcp-websocket`.
 Leave the plugin running while ScoreBridge sends editing commands. Verify the
 live connection with `.venv/bin/scorebridge editor-status`.
 
-ScoreBridge provides a client for external MuseScore plugins, not a bundled
-editor plugin. Inspected implementations of
+ScoreBridge includes its compatible MuseScore editor plugin and a WebSocket
+client. Other implementations such as
 [mcp-score](https://github.com/tskovlund/mcp-score) and
-[mcp-musescore](https://github.com/ghchen99/mcp-musescore) have different command
-sets and wire formats. A running compatible plugin is required for live editing.
+[mcp-musescore](https://github.com/ghchen99/mcp-musescore) use different command
+sets and wire formats. The bundled plugin must be running for live editing.
 Set `SCOREBRIDGE_MUSESCORE_WS` for a custom endpoint (default `ws://localhost:8765`).
 Protocol detection uses read-only ping; `SCOREBRIDGE_MUSESCORE_PROTOCOL` can force
 `action` or `command`. No mutation is automatically retried after a timeout.
+`scorebridge editor-status` reads the plugin's declared command list without
+editing the score. Restart MuseScore after updating the plugin so QML is reloaded.
+
+The current live bridge edits and saves an already-open score. New-score creation,
+opening a path, Save As, and automatic instrument sound assignment remain pending;
+ScoreBridge reports the available commands rather than claiming those operations
+succeeded.
 
 ## Agent entry point
 
