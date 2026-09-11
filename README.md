@@ -84,6 +84,11 @@ The Agent can keep a compact command plan instead of the legacy Score IR:
 scorebridge execute-plan PLAN.json
 ```
 
+`examples/create-and-save-plan.json` shows the recommended lifecycle order for a
+new score: create, set notation context, write content, then save as MSCZ. The
+same plan can be sent through `musescore_execute_plan`; each step has a stable ID
+so a partial failure can resume from the last acknowledged command.
+
 The MCP equivalent is `musescore_execute_plan(input_path)`. It prevalidates step
 IDs, executes in order, and reports completed IDs and the failed step. It is not
 an atomic transaction. Inspect current editor state after a failure before

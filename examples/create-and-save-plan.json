@@ -1,0 +1,9 @@
+{
+  "steps": [
+    {"id": "create-score", "action": "createScore", "params": {"title": "Agent Score", "instrumentId": "piano", "measures": 1}},
+    {"id": "set-time", "action": "setTimeSignature", "params": {"numerator": 4, "denominator": 4}},
+    {"id": "set-tempo", "action": "setTempo", "params": {"bpm": 96}},
+    {"id": "add-note", "action": "addNote", "params": {"pitch": 60, "duration": "quarter"}},
+    {"id": "save-as", "action": "saveAs", "params": {"path": "/tmp/scorebridge-agent-score.mscz"}}
+  ]
+}

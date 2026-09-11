@@ -36,3 +36,13 @@ def test_plan_prevalidates_all_steps_before_writing():
     result = execute_plan({'steps': [{'id': 'same', 'action': 'a'}, {'id': 'same', 'action': 'b'}]}, bridge)
     assert result['status'] == 'error'
     assert bridge.calls == []
+
+
+def test_create_and_save_example_plan_is_ordered():
+    import json
+    from pathlib import Path
+    plan = json.loads((Path(__file__).parents[1] / "examples/create-and-save-plan.json").read_text())
+    bridge = Bridge()
+    result = execute_plan(plan, bridge)
+    assert result["status"] == "executed"
+    assert bridge.calls == ["createScore", "setTimeSignature", "setTempo", "addNote", "saveAs"]
