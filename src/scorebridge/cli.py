@@ -31,23 +31,8 @@ def main():
         report = MuseScoreWebSocketBackend().status()
         print(json.dumps(report, ensure_ascii=False, indent=2)); raise SystemExit(0 if report["available"] else 1)
     if args.command == "instrument-audit":
-        from .instruments import instrument_spec
-        score = load_score(args.input)
-        parts = []
-        unresolved = []
-        for part in score.parts:
-            spec = instrument_spec(part.instrument_id)
-            item = {"id": part.id, "name": part.name, "instrument_id": part.instrument_id,
-                    "mapped": bool(spec), "instrument_sound": spec.get("instrument_sound"),
-                    "midi_program": spec.get("midi_program")}
-            parts.append(item)
-            if not spec:
-                unresolved.append(part.instrument_id)
-        report = {"status": "pass" if not unresolved else "needs_review", "parts": parts,
-                  "unresolved_instrument_ids": unresolved,
-                  "piano_fallback_detected": any(
-                      item["instrument_id"] != "keyboard.piano" and
-                      item["instrument_sound"] == "keyboard.piano" for item in parts)}
+        from .instrument_audit import audit_instruments
+        report = audit_instruments(load_score(args.input))
         print(json.dumps(report, ensure_ascii=False, indent=2)); raise SystemExit(0 if report["status"] == "pass" else 1)
     if args.command == "open-score":
         from .musescore import MuseScoreAdapter, MuseScoreError

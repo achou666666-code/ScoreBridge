@@ -15,7 +15,7 @@ from scorebridge.review import create_review_packet, apply_review
 from scorebridge.finalize import finalize_score
 from scorebridge.workflow import transcribe_score
 from scorebridge.doctor import diagnose
-from scorebridge.instruments import instrument_spec
+from scorebridge.instrument_audit import audit_instruments
 from scorebridge.agent_workflow import prepare_agent_job, execute_plan_file
 
 try:
@@ -52,24 +52,7 @@ def score_inspect(input_path: str) -> dict:
 @mcp.tool()
 def score_instrument_audit(input_path: str) -> dict:
     """Audit every part's instrument mapping before MuseScore export."""
-    score = load_score(input_path)
-    parts = []
-    unresolved = []
-    for part in score.parts:
-        spec = instrument_spec(part.instrument_id)
-        item = {"id": part.id, "name": part.name,
-                "instrument_id": part.instrument_id,
-                "mapped": bool(spec),
-                "instrument_sound": spec.get("instrument_sound"),
-                "midi_program": spec.get("midi_program")}
-        parts.append(item)
-        if not spec:
-            unresolved.append(part.instrument_id)
-    return {"status": "pass" if not unresolved else "needs_review",
-            "parts": parts, "unresolved_instrument_ids": unresolved,
-            "piano_fallback_detected": any(
-                item["instrument_id"] != "keyboard.piano" and
-                item["instrument_sound"] == "keyboard.piano" for item in parts)}
+    return audit_instruments(load_score(input_path))
 
 @mcp.tool()
 def score_apply_patch(input_path: str, patch: dict, output_path: str = "") -> dict:
