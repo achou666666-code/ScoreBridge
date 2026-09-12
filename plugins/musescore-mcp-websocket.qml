@@ -75,6 +75,7 @@ MuseScore {
             case "addDynamic":              return addDynamic(command.params);
             case "addArticulation":         return addArticulation(command.params);
             case "addSlur":                 return addSlur(command.params);
+            case "addTechniqueText":        return addTechniqueText(command.params);
 
             // Measures
             case "appendMeasure":           return appendMeasure(command.params);
@@ -315,6 +316,7 @@ MuseScore {
             ],
             reserved_commands: ["createScore", "openScore", "saveAs", "addDynamic",
                                 "addArticulation", "addSlur",
+                                "addTechniqueText",
                                 "setStaffMute", "setInstrumentSound"]
         };
     }
@@ -989,6 +991,20 @@ MuseScore {
         return executeWithUndo(function() {
             cmd("add-slur");
             return { success: true, message: "Slur added", currentSelection: selectionState };
+        });
+    }
+
+    function addTechniqueText(params) {
+        var validation = validateParams(params, ["text"]);
+        if (!validation.valid) return validation;
+        if (!String(params.text).trim()) return { error: "Technique text must not be empty" };
+        return executeWithUndo(function() {
+            syncStateToSelection();
+            var cursor = createCursor({ startTick: selectionState.startTick, startStaff: selectionState.startStaff });
+            var marking = newElement(Element.STAFF_TEXT);
+            marking.text = params.text;
+            cursor.add(marking);
+            return { success: true, message: "Technique text added", currentSelection: selectionState };
         });
     }
 

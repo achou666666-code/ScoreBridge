@@ -23,6 +23,8 @@ def test_bundled_plugin_exposes_save_command():
     assert 'case "addSlur":' in text
     assert 'staccato: "add-staccato"' in text
     assert 'cmd("add-slur")' in text
+    assert 'case "addTechniqueText":' in text
+    assert 'newElement(Element.STAFF_TEXT)' in text
     assert 'reserved_commands: ["createScore", "openScore", "saveAs",' in text
     sequence_block = text.split('function processSequence(params)', 1)[1].split('try {', 1)[0]
     assert '"createScore"' not in sequence_block
@@ -31,3 +33,4 @@ def test_bundled_plugin_exposes_save_command():
     assert '"addDynamic"' not in sequence_block
     assert '"addArticulation"' not in sequence_block
     assert '"addSlur"' not in sequence_block
+    assert '"addTechniqueText"' not in sequence_block

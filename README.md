@@ -82,6 +82,8 @@ clean MuseScore restart verifies dynamic-element insertion on the target version
 The bundled plugin also implements reserved `addArticulation` and `addSlur`
 commands using MuseScore 4.7.4's registered editing actions. They stay out of
 verified command plans until a clean selected-note/range smoke test passes.
+Reserved `addTechniqueText` inserts staff text for playing instructions such as
+`pizz.`, `arco`, `con sord.`, and `solo`; it requires the same live verification.
 
 ## Agent entry point
 
