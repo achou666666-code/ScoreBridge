@@ -45,3 +45,20 @@ function createCursor(){return {rewind(){},segment:segment};}
 ''', '({report:selectCustomRange({startTick:0,endTick:480,startStaff:0,endStaff:1}),queried:queried})')
     assert list(result['report']['currentSelection']['elements']) == ['staff0']
     assert result['queried'] == [0, 1, 2, 3]
+
+
+def test_dynamic_sets_semantic_type_instead_of_plain_text():
+    result = run_function('addDynamic', '''
+var DynamicType={PP:6}, Element={DYNAMIC:1}, selectionState={startTick:0,startStaff:0}, inserted=[];
+function validateParams(){return {valid:true};}
+function executeWithUndo(f){return f();}
+function syncStateToSelection(){}
+function newElement(){return {};}
+function createCursor(){return {add(e){inserted.push(e);}};}
+''', '({report:addDynamic({type:"pp"}),inserted:inserted})')
+    assert result['report']['success'] is True
+    assert result['inserted'] == [{'dynamicType': 6}]
+
+
+def test_dynamic_rejects_missing_parameters():
+    assert run_function('addDynamic', '', 'addDynamic(null)')['error']

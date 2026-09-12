@@ -969,6 +969,7 @@ MuseScore {
     }
 
     function addDynamic(params) {
+        if (!params || typeof params.type !== "string") return { error: "Dynamic type must be a string" };
         var validation = validateParams(params, ["type"]);
         if (!validation.valid) return validation;
         var allowed = ["ppp", "pp", "p", "mp", "mf", "f", "ff", "fff", "sfz", "fp", "rfz"];
@@ -977,7 +978,10 @@ MuseScore {
             syncStateToSelection();
             var cursor = createCursor({ startTick: selectionState.startTick, startStaff: selectionState.startStaff });
             var dynamic = newElement(Element.DYNAMIC);
-            dynamic.text = params.type;
+            if (typeof DynamicType === "undefined" || DynamicType[params.type.toUpperCase()] === undefined) {
+                throw new Error("Standard dynamic types require MuseScore 4.6 or later");
+            }
+            dynamic.dynamicType = DynamicType[params.type.toUpperCase()];
             cursor.add(dynamic);
             return { success: true, message: "Dynamic " + params.type + " added", currentSelection: selectionState };
         });
