@@ -24,6 +24,7 @@ Audiveris is optional assistance, not the default recognition engine.
 - CLI equivalent: `scorebridge open-score INPUT`.
 - `score_instrument_audit`: verify each part maps to a real instrument sound and MIDI program before export.
 - `addDynamic` is reserved pending a clean MuseScore-version smoke test; do not claim it succeeded from static inspection alone.
+- `addArticulation` (staccato, marcato, tenuto) and `addSlur` are implemented but reserved pending a clean selection smoke test.
 - `musescore_websocket_command`: execute one plugin-supported command; plugin errors propagate.
 - `musescore_execute_plan`: ordered JSON command plan with completed IDs on failure. CLI: `scorebridge execute-plan PLAN.json`.
 - `score_finalize`: legacy Score IR compilation route delivering MSCZ, with temporary XML and audit data under `.scorebridge/`.

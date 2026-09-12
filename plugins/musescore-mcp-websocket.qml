@@ -73,6 +73,8 @@ MuseScore {
             case "addTuplet":               return addTuplet(command.params);
             case "addLyrics":               return addLyrics(command.params);
             case "addDynamic":              return addDynamic(command.params);
+            case "addArticulation":         return addArticulation(command.params);
+            case "addSlur":                 return addSlur(command.params);
 
             // Measures
             case "appendMeasure":           return appendMeasure(command.params);
@@ -312,6 +314,7 @@ MuseScore {
                 "setTimeSignature", "setTempo", "setStaffVisible"
             ],
             reserved_commands: ["createScore", "openScore", "saveAs", "addDynamic",
+                                "addArticulation", "addSlur",
                                 "setStaffMute", "setInstrumentSound"]
         };
     }
@@ -335,8 +338,8 @@ MuseScore {
             "addNote", "addRest", "addTuplet", "appendMeasure", "deleteSelection",
             "getCursorInfo", "goToMeasure", "nextElement", "prevElement", "nextStaff", "prevStaff", "save",
             "selectCurrentMeasure", "processSequence", "insertMeasure", "goToFinalMeasure",
-            "goToBeginningOfScore", "setTimeSignature", "addLyrics", "addInstrument",    
-            "addDynamic", "setStaffVisible", "setTempo"
+            "goToBeginningOfScore", "setTimeSignature", "addLyrics", "addInstrument",
+            "setStaffVisible", "setTempo"
         ];
 
         try {
@@ -968,6 +971,24 @@ MuseScore {
             dynamic.text = params.type;
             cursor.add(dynamic);
             return { success: true, message: "Dynamic " + params.type + " added", currentSelection: selectionState };
+        });
+    }
+
+    function addArticulation(params) {
+        var validation = validateParams(params, ["type"]);
+        if (!validation.valid) return validation;
+        var actions = { staccato: "add-staccato", marcato: "add-marcato", tenuto: "add-tenuto" };
+        if (!actions[params.type]) return { error: "Unsupported articulation: " + params.type };
+        return executeWithUndo(function() {
+            cmd(actions[params.type]);
+            return { success: true, message: "Articulation " + params.type + " added", currentSelection: selectionState };
+        });
+    }
+
+    function addSlur(params) {
+        return executeWithUndo(function() {
+            cmd("add-slur");
+            return { success: true, message: "Slur added", currentSelection: selectionState };
         });
     }
 

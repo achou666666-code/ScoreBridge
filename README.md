@@ -79,6 +79,9 @@ internal score plan. It reports unresolved IDs and detects an accidental piano
 fallback; a part label alone is not evidence of a correct playback sound.
 `addDynamic` is implemented in the bundled editor but remains reserved until a
 clean MuseScore restart verifies dynamic-element insertion on the target version.
+The bundled plugin also implements reserved `addArticulation` and `addSlur`
+commands using MuseScore 4.7.4's registered editing actions. They stay out of
+verified command plans until a clean selected-note/range smoke test passes.
 
 ## Agent entry point
 
