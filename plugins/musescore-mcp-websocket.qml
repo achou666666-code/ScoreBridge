@@ -333,7 +333,7 @@ MuseScore {
 
     function processSequence(params) {
         if (!curScore) return { error: "No score open" };
-        if (!params.sequence) return { error: "No sequence specified" };
+        if (!params || !Array.isArray(params.sequence)) return { error: "Sequence must be an array" };
 
         var validCommands = [
             "getCapabilities", "getScore",
@@ -344,17 +344,24 @@ MuseScore {
             "setStaffVisible", "setTempo"
         ];
 
+        var completed = [];
+        var i = 0;
         try {
-            for (var i = 0; i < params.sequence.length; i++) {
+            for (i = 0; i < params.sequence.length; i++) {
                 var command = params.sequence[i];
-                if (!validCommands.includes(command.action)) {
-                    throw new Error("Invalid command: " + command.action);
+                if (!command || !validCommands.includes(command.action)) {
+                    throw new Error("Invalid command at index " + i);
                 }
-                processCommand(command);
+                var result = processCommand(command);
+                if (result && (result.error || result.success === false || result.valid === false)) {
+                    return { error: result.error || "Command failed", failedIndex: i,
+                             completedIndices: completed, result: result };
+                }
+                completed.push(i);
             }
-            return { success: true, message: "Sequence processed", currentSelection: selectionState };
+            return { success: true, completedIndices: completed, message: "Sequence processed", currentSelection: selectionState };
         } catch (e) {
-            return { error: e.toString() };
+            return { error: e.toString(), failedIndex: i, completedIndices: completed };
         }
     }
 
@@ -709,7 +716,7 @@ MuseScore {
             curScore.selection.selectRange(startTick, endTick, startStaff, endStaff);
 
             var elementsMap = {};
-            for (var st = startStaff; st <= endStaff; st++) {
+            for (var st = startStaff; st < endStaff; st++) {
                 elementsMap[`staff${st}`] = [];
             }
 
@@ -722,7 +729,7 @@ MuseScore {
             }
 
             while (currentSegment && currentSegment.tick < endTick) {
-                for (var s = startStaff; s <= endStaff; s++) {
+                for (var s = startStaff; s < endStaff; s++) {
                     for (var v = 0; v < 4; v++) {
                         var track = s * 4 + v;
                         var el = currentSegment.elementAt(track);
