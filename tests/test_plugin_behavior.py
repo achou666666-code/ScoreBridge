@@ -57,7 +57,7 @@ function newElement(){return {};}
 function createCursor(){return {add(e){inserted.push(e);}};}
 ''', '({report:addDynamic({type:"pp"}),inserted:inserted})')
     assert result['report']['success'] is True
-    assert result['inserted'] == [{'dynamicType': 6}]
+    assert result['inserted'] == [{'dynamicType': 6, 'text': '<sym>dynamicPiano</sym><sym>dynamicPiano</sym>'}]
 
 
 def test_dynamic_rejects_missing_parameters():

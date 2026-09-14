@@ -982,6 +982,13 @@ MuseScore {
                 throw new Error("Standard dynamic types require MuseScore 4.6 or later");
             }
             dynamic.dynamicType = DynamicType[params.type.toUpperCase()];
+            var symbols = { p: "dynamicPiano", m: "dynamicMezzo", f: "dynamicForte",
+                            s: "dynamicSforzando", r: "dynamicRinforzando", z: "dynamicZ" };
+            var display = "";
+            for (var j = 0; j < params.type.length; j++) {
+                display += "<sym>" + symbols[params.type[j]] + "</sym>";
+            }
+            dynamic.text = display;
             cursor.add(dynamic);
             return { success: true, message: "Dynamic " + params.type + " added", currentSelection: selectionState };
         });

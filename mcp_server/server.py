@@ -26,6 +26,12 @@ except ImportError as exc:
 mcp = FastMCP("ScoreBridge")
 
 @mcp.tool()
+def musescore_connect() -> dict:
+    """Activate the bundled plugin in an open macOS MuseScore and verify connection."""
+    from scorebridge.musescore.connect import connect_editor
+    return connect_editor()
+
+@mcp.tool()
 def scorebridge_doctor() -> dict:
     """Check Python, image, OMR, MuseScore and MCP dependencies."""
     return diagnose()

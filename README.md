@@ -1,5 +1,11 @@
 # ScoreBridge
 
+On macOS, after opening a score, `scorebridge editor-connect` (MCP:
+`musescore_connect`) activates the installed bundled plugin and verifies its
+WebSocket connection. An existing connection is reused without clicking the
+plugin again. MuseScore must be running and macOS Accessibility permission must
+be available. This command does not install the plugin or restart MuseScore.
+
 Agent-led sheet-music transcription and MuseScore control. The calling Agent reads
 PDF/PNG/JPG/TIFF/WebP sources, organizes music, and uses editor tools to produce
 an editable, playable **MSCZ**. Audiveris is opt-in assistance.

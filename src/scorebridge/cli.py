@@ -12,6 +12,7 @@ def main():
     prepare=sub.add_parser("prepare"); prepare.add_argument("input"); prepare.add_argument("--output", required=True)
     prepare.add_argument("--dpi", type=int, default=450)
     sub.add_parser("editor-status")
+    sub.add_parser("editor-connect")
     audit = sub.add_parser("instrument-audit")
     audit.add_argument("input")
     open_score = sub.add_parser("open-score")
@@ -21,6 +22,11 @@ def main():
     validate=sub.add_parser("validate"); validate.add_argument("input")
     compile_cmd=sub.add_parser("compile"); compile_cmd.add_argument("input"); compile_cmd.add_argument("--output", required=True)
     args=parser.parse_args()
+    if args.command == "editor-connect":
+        from .musescore.connect import connect_editor
+        report = connect_editor()
+        print(json.dumps(report, ensure_ascii=False, indent=2))
+        raise SystemExit(0 if report['status'] == 'connected' else 1)
     if args.command == "doctor":
         report = diagnose(); print(json.dumps(report, ensure_ascii=False, indent=2)); raise SystemExit(0 if report["status"] == "pass" else 1)
     if args.command == "prepare":

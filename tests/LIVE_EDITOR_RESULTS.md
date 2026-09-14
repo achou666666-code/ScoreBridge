@@ -1,5 +1,18 @@
 # Live editor verification
 
+## Follow-up, September 14, 2026
+
+The macOS `editor-connect` CLI was tested after quitting and reopening MuseScore.
+It discovered the plugin menu, clicked it in a separate AppleScript invocation,
+and returned `activation: menu` only after a successful WebSocket ping.
+
+The dynamic fix was tested in the prior live session: standard `pp` saved as
+subtype `pp`, velocity 33, with canonical symbol text normalized by MuseScore.
+The earlier type-only `ff` trial saved velocity 112 but empty display text;
+the implementation now supplies both the type and SMuFL symbol text.
+These are saved-file checks, not a listening test. Historical failures below
+are retained as regression evidence.
+
 Tested on MuseScore Studio 4.7.4 with the bundled action-protocol plugin.
 The user opened the existing Vertical Slice fixture and enabled the plugin.
 Commands were sent over WebSocket; results below were inspected in the saved
