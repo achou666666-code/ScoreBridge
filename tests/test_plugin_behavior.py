@@ -78,3 +78,61 @@ def test_sequence_dispatches_position_markings_and_save_in_order():
     assert result['calls'] == sequence
     assert result['report']['success'] is True
     assert result['report']['completedIndices'] == [0, 1, 2, 3]
+
+
+@pytest.mark.parametrize('tracks,staff_end,min_chords,single_voice,valid', [
+    ([0, 0], 1, 2, True, True),
+    ([0], 1, 1, False, True),
+    ([], 1, 1, False, False),
+    ([0], 1, 2, True, False),
+    ([0, 0], 2, 1, False, False),
+    ([0, 1], 1, 2, True, False),
+])
+def test_notation_range_checks_actual_chords(tracks, staff_end, min_chords, single_voice, valid):
+    setup = """
+var Element={CHORD:1};
+var tracks=TRACKS;
+var end={tick:1920};
+var segments=tracks.map((v,i)=>({tick:i*480,elementAt(t){return t===v ? {type:1} : null;}}));
+segments.forEach((s,i)=>s.next=segments[i+1]||end);
+var start=segments[0]||{tick:0,next:end,elementAt(){return null;}};
+var curScore={selection:{startSegment:start,endSegment:end,startStaff:0,endStaff:STAFF_END}};
+""".replace('TRACKS', json.dumps(tracks)).replace('STAFF_END', str(staff_end))
+    result = run_function('validateNotationRange', setup,
+                          f'validateNotationRange({min_chords}, {str(single_voice).lower()})')
+    assert (result.get('valid') is True) is valid
+    if not valid:
+        assert result['error']
+
+
+@pytest.mark.parametrize('setup', [
+    'var curScore=null;',
+    'var curScore={selection:{}};',
+    'var curScore={selection:{startSegment:{tick:480},endSegment:{tick:480}}};',
+])
+def test_notation_requires_open_score_and_nonempty_range(setup):
+    assert run_function('validateNotationRange', setup, 'validateNotationRange(1, false)')['error']
+
+
+@pytest.mark.parametrize('kind', ['toString', 'constructor', 'unsupported'])
+def test_articulation_rejects_unsupported_action_before_dispatch(kind):
+    result = run_function('addArticulation',
+        'function validateParams(){return {valid:true};}',
+        'addArticulation(' + json.dumps({'type':kind}) + ')')
+    assert result['error'].startswith('Unsupported articulation:')
+
+
+@pytest.mark.parametrize('name,params', [('addArticulation', {'type':'staccato'}), ('addSlur', {})])
+def test_notation_rejection_never_dispatches_editor_action(name, params):
+    result = run_function(name,
+        'function validateParams(){return {valid:true};} function validateNotationRange(){return {error:"bad range"};} function executeWithUndo(){throw Error("must not edit");}',
+        name + '(' + json.dumps(params) + ')')
+    assert result == {'error': 'bad range'}
+
+
+def test_sequence_accepts_articulation_and_slur():
+    result = run_function('processSequence',
+        'var curScore={}, selectionState={}, calls=[]; function processCommand(c){calls.push(c.action);return {success:true};}',
+        '({report:processSequence({sequence:[{action:"addArticulation",params:{type:"staccato"}},{action:"addSlur"},{action:"save"}]}),calls:calls})')
+    assert result['calls'] == ['addArticulation', 'addSlur', 'save']
+    assert result['report']['completedIndices'] == [0, 1, 2]

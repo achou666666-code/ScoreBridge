@@ -30,6 +30,6 @@ def test_bundled_plugin_exposes_save_command():
     assert '"openScore"' not in sequence_block
     assert '"saveAs"' not in sequence_block
     assert '"addDynamic"' in sequence_block
-    assert '"addArticulation"' not in sequence_block
-    assert '"addSlur"' not in sequence_block
+    assert '"addArticulation"' in sequence_block
+    assert '"addSlur"' in sequence_block
     assert '"addTechniqueText"' in sequence_block

@@ -1,5 +1,27 @@
 # Live editor verification
 
+## Plugin 2.2 articulation/slur batch, September 14, 2026
+
+Reloaded MuseScore and activated the installed plugin through the desktop UI;
+editor-status confirmed 2.2. On the existing five-staff Vertical Slice fixture,
+selected the initially unmarked second staff and sent one nine-step sequence:
+three select/articulation pairs, select ticks 0–1920, addSlur, save.
+All indices 0–8 completed. Inspecting the actual saved MSCZ found:
+
+- Tick 0: articStaccatoAbove; tick 480: articMarcatoAbove;
+  tick 960: articTenutoAbove.
+- Slur from the first to fourth quarter note: paired relative endpoints
+  +3/4 and -3/4 in their respective chords.
+- Other staves' saved articulation/spanner XML unchanged from a pre-test backup.
+
+Three failing batches tested a rest-only articulation, one-note slur, and
+multi-staff articulation. Each stopped at failedIndex 1, completedIndices [0],
+without writing the following sentinel StaffText. A subsequent save confirmed
+all markings unchanged. Automated JavaScript tests additionally cover missing
+selection, empty selection, mixed voices and unsupported articulation names.
+This promotes articulation/slur commands for these supported ranges; it is not
+a listening test, arbitrary-voice engraving guarantee, or recognition benchmark.
+
 ## Plugin 2.1 batch verification, September 14, 2026
 
 After restart, the automatic menu activation did not consistently establish a

@@ -31,7 +31,15 @@ still reserved in the QML plugin.
 The range → dynamic → technique text → save batch was verified on MuseScore
 4.7.4 by inspecting the saved MSCZ: `mp` with velocity 64 and the exact staff text
 occurred on the target staff only. This verifies these edits, not all notation
-or audible technique switching. Articulation and slur batch support is pending.
+or audible technique switching.
+
+Plugin 2.2 adds batched `addArticulation({type:"staccato"})` (also marcato,
+tenuto) and `addSlur({})`. Use selectCustomRange before each operation. A slur
+connects the selected notes in a single staff and voice; select at least two
+chord positions. Live tests verified exact saved symbols and paired slur endpoints
+in an initially unmarked second staff. Rest-only and multi-staff ranges are
+rejected, as is a one-note slur. Articulations toggle existing marks; these writes
+are not idempotent. Cross-staff and mixed-voice slurs need another editing route.
 
 `SCOREBRIDGE_MUSESCORE_WS` overrides `ws://localhost:8765`.
 `SCOREBRIDGE_MUSESCORE_PROTOCOL` may be `auto`, `action`, or `command`.

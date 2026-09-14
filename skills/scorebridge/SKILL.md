@@ -24,7 +24,7 @@ Audiveris is optional assistance, not the default recognition engine.
 - CLI equivalent: `scorebridge open-score INPUT`.
 - `score_instrument_audit`: verify each part maps to a real instrument sound and MIDI program before export.
 - Bundled plugin 2.1: `selectCustomRange`, `addDynamic`, `addTechniqueText`, and `save` can run together in `processSequence`. Range staff indices are zero-based; `endStaff` is exclusive.
-- `addArticulation` (staccato, marcato, tenuto) and `addSlur` are implemented but reserved pending a clean selection smoke test.
+- Bundled plugin 2.2 supports `addArticulation` (staccato, marcato, tenuto) and `addSlur` in batches. Select a single staff range containing notes; slurs require at least two chord positions in one voice. Articulation actions toggle existing marks, so preserve completed step IDs and avoid replaying them.
 - `addDynamic` writes standard engraved dynamics and playback values. `addTechniqueText` writes staff text such as `pizz.`, `arco`, and `con sord.`; text alone does not switch playback techniques.
 - `musescore_websocket_command`: execute one plugin-supported command; plugin errors propagate.
 - `musescore_execute_plan`: ordered JSON command plan with completed IDs on failure. CLI: `scorebridge execute-plan PLAN.json`.

@@ -5,7 +5,7 @@ MuseScore {
     id: root
     menuPath: "Plugins.MuseScore API Server"
     description: "Exposes MuseScore API via WebSocket (Clean Version)"
-    version: "2.1"
+    version: "2.2"
     
     property var clientConnections: []
     property var selectionState: ({
@@ -313,10 +313,9 @@ MuseScore {
                 "addRest", "addTuplet", "addLyrics", "appendMeasure",
                 "insertMeasure", "deleteSelection", "addInstrument",
                 "setTimeSignature", "setTempo", "setStaffVisible",
-                "addDynamic", "addTechniqueText"
+                "addDynamic", "addTechniqueText", "addArticulation", "addSlur"
             ],
             reserved_commands: ["createScore", "openScore", "saveAs",
-                                "addArticulation", "addSlur",
                                 "setStaffMute", "setInstrumentSound"]
         };
     }
@@ -341,7 +340,7 @@ MuseScore {
             "getCursorInfo", "goToMeasure", "nextElement", "prevElement", "nextStaff", "prevStaff", "save",
             "selectCurrentMeasure", "processSequence", "insertMeasure", "goToFinalMeasure",
             "goToBeginningOfScore", "setTimeSignature", "addLyrics", "addInstrument",
-            "setStaffVisible", "setTempo", "selectCustomRange", "addDynamic", "addTechniqueText"
+            "setStaffVisible", "setTempo", "selectCustomRange", "addDynamic", "addTechniqueText", "addArticulation", "addSlur"
         ];
 
         var completed = [];
@@ -994,11 +993,40 @@ MuseScore {
         });
     }
 
+    function validateNotationRange(minChords, singleVoice) {
+        if (!curScore) return { error: "No score open" };
+        var selection = curScore.selection;
+        var start = selection.startSegment;
+        var end = selection.endSegment;
+        if (!start || !end || start.tick >= end.tick)
+            return { error: "Select an explicit nonempty tick range before adding notation" };
+        if (selection.endStaff !== selection.startStaff + 1)
+            return { error: "Notation commands require a single-staff range" };
+        var count = 0;
+        var voices = {};
+        for (var segment = start; segment && segment.tick < end.tick; segment = segment.next) {
+            for (var voice = 0; voice < 4; voice++) {
+                var element = segment.elementAt(selection.startStaff * 4 + voice);
+                if (element && element.type === Element.CHORD) {
+                    count++;
+                    voices[voice] = true;
+                }
+            }
+        }
+        if (count < minChords) return { error: "Selected range requires at least " + minChords + " note/chord positions" };
+        if (singleVoice && Object.keys(voices).length !== 1)
+            return { error: "Slur range must contain notes in exactly one voice" };
+        return { valid: true };
+    }
+
     function addArticulation(params) {
+        if (!params || typeof params.type !== "string") return { error: "Articulation type must be a string" };
         var validation = validateParams(params, ["type"]);
         if (!validation.valid) return validation;
         var actions = { staccato: "add-staccato", marcato: "add-marcato", tenuto: "add-tenuto" };
-        if (!actions[params.type]) return { error: "Unsupported articulation: " + params.type };
+        if (!Object.prototype.hasOwnProperty.call(actions, params.type)) return { error: "Unsupported articulation: " + params.type };
+        var range = validateNotationRange(1, false);
+        if (!range.valid) return range;
         return executeWithUndo(function() {
             cmd(actions[params.type]);
             return { success: true, message: "Articulation " + params.type + " added", currentSelection: selectionState };
@@ -1006,6 +1034,8 @@ MuseScore {
     }
 
     function addSlur(params) {
+        var range = validateNotationRange(2, true);
+        if (!range.valid) return range;
         return executeWithUndo(function() {
             cmd("add-slur");
             return { success: true, message: "Slur added", currentSelection: selectionState };

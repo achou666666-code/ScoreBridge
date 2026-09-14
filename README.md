@@ -89,8 +89,12 @@ range selection, standard `mp` dynamics, staff text, and saving to MSCZ.
 Dynamic markings include a semantic playback value and engraved symbols.
 Technique text preserves the printed instruction; it does not itself switch
 playback to pizzicato, muted, or other techniques.
-The bundled plugin also implements reserved `addArticulation` and `addSlur`
-commands. Broader selection/error handling checks remain pending.
+Bundled plugin 2.2 also supports `addArticulation` (staccato, marcato, tenuto)
+and `addSlur` in batches. Select one explicit staff range first; articulations
+need notes, and slurs need at least two chord positions in one voice. Live tests
+verified saved symbols, slur endpoints, and isolation from other staves.
+Articulation actions toggle existing markings: do not blindly replay a batch.
+Cross-staff and mixed-voice slurs are outside this command's supported scope.
 See `tests/LIVE_EDITOR_RESULTS.md` for the scope of live verification.
 
 ## Agent entry point
