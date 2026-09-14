@@ -5,7 +5,7 @@ MuseScore {
     id: root
     menuPath: "Plugins.MuseScore API Server"
     description: "Exposes MuseScore API via WebSocket (Clean Version)"
-    version: "2.0"
+    version: "2.1"
     
     property var clientConnections: []
     property var selectionState: ({
@@ -312,11 +312,11 @@ MuseScore {
                 "selectCustomRange", "processSequence", "addNote",
                 "addRest", "addTuplet", "addLyrics", "appendMeasure",
                 "insertMeasure", "deleteSelection", "addInstrument",
-                "setTimeSignature", "setTempo", "setStaffVisible"
+                "setTimeSignature", "setTempo", "setStaffVisible",
+                "addDynamic", "addTechniqueText"
             ],
-            reserved_commands: ["createScore", "openScore", "saveAs", "addDynamic",
+            reserved_commands: ["createScore", "openScore", "saveAs",
                                 "addArticulation", "addSlur",
-                                "addTechniqueText",
                                 "setStaffMute", "setInstrumentSound"]
         };
     }
@@ -341,7 +341,7 @@ MuseScore {
             "getCursorInfo", "goToMeasure", "nextElement", "prevElement", "nextStaff", "prevStaff", "save",
             "selectCurrentMeasure", "processSequence", "insertMeasure", "goToFinalMeasure",
             "goToBeginningOfScore", "setTimeSignature", "addLyrics", "addInstrument",
-            "setStaffVisible", "setTempo"
+            "setStaffVisible", "setTempo", "selectCustomRange", "addDynamic", "addTechniqueText"
         ];
 
         var completed = [];

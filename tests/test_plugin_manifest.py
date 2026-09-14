@@ -18,7 +18,6 @@ def test_bundled_plugin_exposes_save_command():
     assert 'setInstrumentSound is not implemented' in text
     assert 'case "setStaffVisible":' in text
     assert 'case "addDynamic":' in text
-    assert 'reserved_commands: ["createScore", "openScore", "saveAs", "addDynamic",' in text
     assert 'case "addArticulation":' in text
     assert 'case "addSlur":' in text
     assert 'staccato: "add-staccato"' in text
@@ -30,7 +29,7 @@ def test_bundled_plugin_exposes_save_command():
     assert '"createScore"' not in sequence_block
     assert '"openScore"' not in sequence_block
     assert '"saveAs"' not in sequence_block
-    assert '"addDynamic"' not in sequence_block
+    assert '"addDynamic"' in sequence_block
     assert '"addArticulation"' not in sequence_block
     assert '"addSlur"' not in sequence_block
-    assert '"addTechniqueText"' not in sequence_block
+    assert '"addTechniqueText"' in sequence_block

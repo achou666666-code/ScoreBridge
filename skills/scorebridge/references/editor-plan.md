@@ -10,29 +10,28 @@ ordered batches with stable IDs:
 ]}
 ```
 
-These example actions target mcp-score and assume the correct score/staff is open.
-The bundled action-protocol plugin supports `save`, which saves the currently
-open document to its existing MuseScore path.
-`addDynamic` is present in the bundled implementation but stays reserved until
-it passes a clean MuseScore-version smoke test; plans must not treat a reserved
-command as acknowledged editor work.
-Read the installed plugin's parameters before writing. Do not assume command names
-or duration conventions are interchangeable across plugins.
+Check the connected backend's capabilities and parameters before execution.
+The bundled action-protocol plugin 2.1 supports standard `addDynamic`,
+`addTechniqueText`, and `save` on an already-open score. `save` uses its existing
+MuseScore path. Set an explicit staff/tick range when positioning a batch:
+`selectCustomRange({startTick: 0, endTick: 480, startStaff: 0, endStaff: 1})`.
+Staff indices are zero-based and endStaff is exclusive. Do not assume duration
+conventions or command names are interchangeable across plugins.
 
 ## Backend evidence
 
-ScoreBridge is a WebSocket client; it does not bundle a MuseScore plugin.
-The two locally inspected upstream plugin implementations differ:
+ScoreBridge includes `plugins/musescore-mcp-websocket.qml`. Its `getCapabilities`
+response separates available `commands` from `reserved_commands`; editor-status
+exposes that response. Upstream mcp-score uses a different `command` protocol;
+the bundled plugin uses `action`. Prefer the connected instance's capabilities
+over an upstream command list. Opening an existing file is handled by
+`musescore_open`; new-score creation, Save As, and direct sound assignment are
+still reserved in the QML plugin.
 
-| Plugin | Wire key | Implemented examples | Missing or misleading operations |
-| --- | --- | --- | --- |
-| mcp-score | `command` | notes, keys, meter, tempo, dynamics, chord symbols, repeats, staff navigation, sequences | No create/open/save, instrument management, lyrics, slurs or layout commands in inspected dispatcher; voice fixed to 0 |
-| mcp-musescore style API Server | `action` | notes, rests, tuplets, lyrics, append instrument, meter, tempo, save (bundled plugin) | `setInstrumentSound` opens a dialog only; `setStaffMute` changes visibility; no create/open or key command in inspected dispatcher |
-
-This table describes inspected source, not every release or a live capability guarantee.
-There is no universal capability discovery command. The status tool reports the
-negotiated wire protocol, not full editor coverage. Neither upstream plugin alone
-currently supplies the complete intended workflow.
+The range → dynamic → technique text → save batch was verified on MuseScore
+4.7.4 by inspecting the saved MSCZ: `mp` with velocity 64 and the exact staff text
+occurred on the target staff only. This verifies these edits, not all notation
+or audible technique switching. Articulation and slur batch support is pending.
 
 `SCOREBRIDGE_MUSESCORE_WS` overrides `ws://localhost:8765`.
 `SCOREBRIDGE_MUSESCORE_PROTOCOL` may be `auto`, `action`, or `command`.

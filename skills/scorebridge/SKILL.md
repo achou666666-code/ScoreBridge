@@ -23,9 +23,9 @@ Audiveris is optional assistance, not the default recognition engine.
 - `musescore_open`: launch an existing MSCZ or MusicXML file in MuseScore before live editing.
 - CLI equivalent: `scorebridge open-score INPUT`.
 - `score_instrument_audit`: verify each part maps to a real instrument sound and MIDI program before export.
-- `addDynamic` is reserved pending a clean MuseScore-version smoke test; do not claim it succeeded from static inspection alone.
+- Bundled plugin 2.1: `selectCustomRange`, `addDynamic`, `addTechniqueText`, and `save` can run together in `processSequence`. Range staff indices are zero-based; `endStaff` is exclusive.
 - `addArticulation` (staccato, marcato, tenuto) and `addSlur` are implemented but reserved pending a clean selection smoke test.
-- `addTechniqueText` is implemented for staff text such as `pizz.`, `arco`, and `con sord.`, but remains reserved pending a live smoke test.
+- `addDynamic` writes standard engraved dynamics and playback values. `addTechniqueText` writes staff text such as `pizz.`, `arco`, and `con sord.`; text alone does not switch playback techniques.
 - `musescore_websocket_command`: execute one plugin-supported command; plugin errors propagate.
 - `musescore_execute_plan`: ordered JSON command plan with completed IDs on failure. CLI: `scorebridge execute-plan PLAN.json`.
 - `score_finalize`: legacy Score IR compilation route delivering MSCZ, with temporary XML and audit data under `.scorebridge/`.

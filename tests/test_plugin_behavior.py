@@ -62,3 +62,19 @@ function createCursor(){return {add(e){inserted.push(e);}};}
 
 def test_dynamic_rejects_missing_parameters():
     assert run_function('addDynamic', '', 'addDynamic(null)')['error']
+
+
+def test_sequence_dispatches_position_markings_and_save_in_order():
+    actions = ['selectCustomRange', 'addDynamic', 'addTechniqueText', 'save']
+    sequence = [
+        {'action': actions[0], 'params': {'startTick': 1920, 'endTick': 2400, 'startStaff': 0, 'endStaff': 1}},
+        {'action': actions[1], 'params': {'type': 'mp'}},
+        {'action': actions[2], 'params': {'text': 'solo'}},
+        {'action': actions[3], 'params': {}},
+    ]
+    result = run_function('processSequence',
+        'var curScore={}, selectionState={}, calls=[]; function processCommand(c) { calls.push(c); return {success:true}; }',
+        '({report:processSequence(' + json.dumps({'sequence': sequence}) + '),calls:calls})')
+    assert result['calls'] == sequence
+    assert result['report']['success'] is True
+    assert result['report']['completedIndices'] == [0, 1, 2, 3]

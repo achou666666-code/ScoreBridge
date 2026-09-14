@@ -1,6 +1,23 @@
 # Live editor verification
 
-## Follow-up, September 14, 2026
+## Plugin 2.1 batch verification, September 14, 2026
+
+After restart, the automatic menu activation did not consistently establish a
+connection. Selecting the plugin using the desktop UI did; editor-status then
+reported pluginVersion 2.1. Automatic connection recovery remains incomplete.
+
+One WebSocket processSequence call selected staff 0, ticks 1920–2400, inserted
+`mp`, inserted `ScoreBridge batch verified`, and saved. The response reported
+completedIndices [0, 1, 2, 3]. Reading the actual saved MSCZ confirmed `mp` subtype,
+velocity 64, and exact StaffText in the first staff's second measure. The other
+four staves had neither this dynamic nor the inserted marker. The original
+fixture is kept out of the source commit because it contains live test edits.
+
+This promotes addDynamic and addTechniqueText to available commands and enables
+them with selectCustomRange in batch execution. It does not establish listening
+quality, automatic technique switching, or general image transcription accuracy.
+
+## Earlier follow-up, September 14, 2026
 
 The macOS `editor-connect` CLI was tested after quitting and reopening MuseScore.
 It discovered the plugin menu, clicked it in a separate AppleScript invocation,

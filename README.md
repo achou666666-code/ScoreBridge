@@ -83,13 +83,15 @@ The same operation is available locally as `scorebridge open-score INPUT`.
 Before exporting or editing playback, call `score_instrument_audit` on the
 internal score plan. It reports unresolved IDs and detects an accidental piano
 fallback; a part label alone is not evidence of a correct playback sound.
-`addDynamic` is implemented in the bundled editor but remains reserved until a
-clean MuseScore restart verifies dynamic-element insertion on the target version.
+`addDynamic` and `addTechniqueText` are available individually and in
+`processSequence` in bundled plugin 2.1. A live MuseScore 4.7.4 batch verified
+range selection, standard `mp` dynamics, staff text, and saving to MSCZ.
+Dynamic markings include a semantic playback value and engraved symbols.
+Technique text preserves the printed instruction; it does not itself switch
+playback to pizzicato, muted, or other techniques.
 The bundled plugin also implements reserved `addArticulation` and `addSlur`
-commands using MuseScore 4.7.4's registered editing actions. They stay out of
-verified command plans until a clean selected-note/range smoke test passes.
-Reserved `addTechniqueText` inserts staff text for playing instructions such as
-`pizz.`, `arco`, `con sord.`, and `solo`; it requires the same live verification.
+commands. Broader selection/error handling checks remain pending.
+See `tests/LIVE_EDITOR_RESULTS.md` for the scope of live verification.
 
 ## Agent entry point
 
