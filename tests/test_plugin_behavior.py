@@ -136,3 +136,57 @@ def test_sequence_accepts_articulation_and_slur():
         '({report:processSequence({sequence:[{action:"addArticulation",params:{type:"staccato"}},{action:"addSlur"},{action:"save"}]}),calls:calls})')
     assert result['calls'] == ['addArticulation', 'addSlur', 'save']
     assert result['report']['completedIndices'] == [0, 1, 2]
+
+
+@pytest.mark.parametrize('written,diatonic,chromatic,concert', [
+    (-3, 0, 0, -3), (-1, -1, -2, -3), (-2, -4, -7, -3),
+    (2, -1, -2, 0), (0, -7, -12, 0), (-7, -1, -2, 3), (7, 1, 2, -3),
+])
+def test_written_key_conversion(written, diatonic, chromatic, concert):
+    args = json.dumps({'diatonic': diatonic, 'chromatic': chromatic})
+    assert run_function('writtenToConcertKey', '', f'writtenToConcertKey({written}, {args})') == concert
+
+
+@pytest.mark.parametrize('params', [None, {}, {'fifths': 8}, {'fifths': -8},
+    {'fifths': 0.5}, {'fifths': '2'}, {'fifths': 0, 'staff': -1, 'measure': 1},
+    {'fifths': 0, 'staff': 5, 'measure': 1}, {'fifths': 0, 'staff': 0, 'measure': 0},
+])
+def test_invalid_key_request_does_not_enter_editor(params):
+    result = run_function('setKeySignature', 'var curScore={nstaves:5};',
+                          'setKeySignature(' + json.dumps(params) + ')')
+    assert result['error']
+
+
+@pytest.mark.parametrize('existing,changed', [
+    (None, True),
+    ({'type': 1, 'concertKey': -3, 'actualKey': -1}, True),
+    ({'type': 1, 'concertKey': 0, 'actualKey': 2}, False),
+])
+def test_key_replaces_only_target_and_is_idempotent(existing, changed):
+    setup = '''
+var Element={KEYSIG:1}, existing=EXISTING, removed=[], added=[], undoCalls=0;
+var target={tick:1920,next:null,elementAt(track){return track===4 ? existing : null;}};
+var cursor={tick:0,segment:{tick:0},fraction:{},measure:{firstSegment:null},
+  nextMeasure(){this.tick=1920;this.segment=target;this.measure.firstSegment=target;return true;},
+  add(k){added.push(k);}};
+var curScore={nstaves:2,style:{value(){return false;}},staves:[{}, {transpose(){return {diatonic:-1,chromatic:-2};}}]};
+function createCursor(p){if(p.startStaff!==1)throw Error('wrong staff');return cursor;}
+function writtenToConcertKey(k,i){return k-2;}
+function executeWithUndo(f){undoCalls++;return f();}
+function removeElement(e){removed.push(e);}
+function newElement(){return {};}
+'''.replace('EXISTING', json.dumps(existing))
+    result = run_function('setKeySignature', setup,
+        '({report:setKeySignature({staff:1,measure:2,fifths:2}),removed:removed,added:added,undoCalls:undoCalls})')
+    assert result['report']['changed'] is changed
+    assert result['report']['writtenFifths'] == 2
+    assert result['report']['concertFifths'] == 0
+    assert result['undoCalls'] == int(changed)
+    assert result['removed'] == ([existing] if existing and changed else [])
+    assert result['added'] == ([{'concertKey': 0, 'actualKey': 2}] if changed else [])
+
+
+def test_key_requires_written_display():
+    setup = 'var curScore={nstaves:1,style:{value(){return true;}}};'
+    assert 'concert pitch' in run_function('setKeySignature', setup,
+        'setKeySignature({staff:0,measure:1,fifths:0})')['error']

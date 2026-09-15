@@ -5,7 +5,7 @@ MuseScore {
     id: root
     menuPath: "Plugins.MuseScore API Server"
     description: "Exposes MuseScore API via WebSocket (Clean Version)"
-    version: "2.2"
+    version: "2.3"
     
     property var clientConnections: []
     property var selectionState: ({
@@ -87,6 +87,7 @@ MuseScore {
             case "setStaffMute":            return setStaffMute(command.params);
             case "setStaffVisible":         return setStaffVisible(command.params);
             case "setInstrumentSound":      return setInstrumentSound(command.params);
+            case "setKeySignature":         return setKeySignature(command.params);
             case "setTimeSignature":        return setTimeSignature(command.params);
             case "setTempo":                return setTempo(command.params);
 
@@ -312,7 +313,7 @@ MuseScore {
                 "selectCustomRange", "processSequence", "addNote",
                 "addRest", "addTuplet", "addLyrics", "appendMeasure",
                 "insertMeasure", "deleteSelection", "addInstrument",
-                "setTimeSignature", "setTempo", "setStaffVisible",
+                "setKeySignature", "setTimeSignature", "setTempo", "setStaffVisible",
                 "addDynamic", "addTechniqueText", "addArticulation", "addSlur"
             ],
             reserved_commands: ["createScore", "openScore", "saveAs",
@@ -339,7 +340,7 @@ MuseScore {
             "addNote", "addRest", "addTuplet", "appendMeasure", "deleteSelection",
             "getCursorInfo", "goToMeasure", "nextElement", "prevElement", "nextStaff", "prevStaff", "save",
             "selectCurrentMeasure", "processSequence", "insertMeasure", "goToFinalMeasure",
-            "goToBeginningOfScore", "setTimeSignature", "addLyrics", "addInstrument",
+            "goToBeginningOfScore", "setKeySignature", "setTimeSignature", "addLyrics", "addInstrument",
             "setStaffVisible", "setTempo", "selectCustomRange", "addDynamic", "addTechniqueText", "addArticulation", "addSlur"
         ];
 
@@ -1162,6 +1163,55 @@ MuseScore {
             return { success: true, message: "Instrument dialog opened, manual selection required" };
         });
         */
+    }
+
+    function writtenToConcertKey(fifths, interval) {
+        // A chromatic semitone contributes seven fifths; a diatonic step twelve.
+        var key = fifths + 7 * interval.chromatic - 12 * interval.diatonic;
+        while (key < -7) key += 12;
+        while (key > 7) key -= 12;
+        return key;
+    }
+
+    function setKeySignature(params) {
+        if (!curScore) return { error: "No score open" };
+        if (!params || !Number.isInteger(params.fifths) || params.fifths < -7 || params.fifths > 7)
+            return { error: "fifths must be an integer from -7 (flats) to 7 (sharps)" };
+        if (!Number.isInteger(params.staff) || params.staff < 0 || params.staff >= curScore.nstaves)
+            return { error: "staff must be a valid zero-based staff index" };
+        if (!Number.isInteger(params.measure) || params.measure < 1)
+            return { error: "measure must be a positive one-based measure number" };
+        if (curScore.style.value("concertPitch"))
+            return { error: "Written-key editing requires the score's concert pitch display to be off" };
+        var cursor = createCursor({startTick: 0, startStaff: params.staff, voice: 0});
+        for (var m = 1; m < params.measure; m++) {
+            if (!cursor.nextMeasure()) return { error: "Measure is outside the score" };
+        }
+        if (!cursor.measure || !cursor.segment) return { error: "No music at target measure" };
+        var staff = curScore.staves[params.staff];
+        var interval = staff.transpose(cursor.fraction);
+        var concert = writtenToConcertKey(params.fifths, interval);
+        var tick = cursor.tick;
+        var existing = null;
+        for (var segment = cursor.measure.firstSegment; segment && segment.tick <= tick; segment = segment.next) {
+            var item = segment.elementAt(params.staff * 4);
+            if (item && item.type === Element.KEYSIG && segment.tick === tick) {
+                existing = item;
+                break;
+            }
+        }
+        if (existing && existing.actualKey === params.fifths && existing.concertKey === concert)
+            return { success: true, changed: false, staff: params.staff, measure: params.measure,
+                     tick: tick, writtenFifths: params.fifths, concertFifths: concert };
+        return executeWithUndo(function() {
+            if (existing) removeElement(existing);
+            var key = newElement(Element.KEYSIG);
+            key.concertKey = concert;
+            key.actualKey = params.fifths;
+            cursor.add(key);
+            return { success: true, changed: true, staff: params.staff, measure: params.measure,
+                     tick: tick, writtenFifths: key.actualKey, concertFifths: key.concertKey };
+        });
     }
 
     function setTimeSignature(params) {

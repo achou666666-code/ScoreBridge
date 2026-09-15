@@ -53,3 +53,15 @@ commands acknowledged, not that a score has been saved or verified musically.
 A notation-only marking and its playback effect are separate checks. An opened
 instrument dialog, a renamed part, or a nonempty audio file does not demonstrate
 a correct instrument assignment.
+
+## Written key signatures (bundled plugin 2.3)
+
+Use `setKeySignature` in a plan with explicit `staff`, `measure`, and `fifths`.
+For a B-flat clarinet at staff 1 whose second measure prints one flat:
+`{"action":"setKeySignature","params":{"staff":1,"measure":2,"fifths":-1}}`.
+Read the printed key directly; do not pre-transpose this input. The command derives
+the concert key from MuseScore's staff transposition at that measure. An identical
+setting returns changed:false. A new setting replaces the signature at that
+position without transposing existing notes. It affects the selected staff only.
+Use written-pitch display and conventional keys (-7 through +7); percussion and
+custom key signatures need another route. The target must be a measure start.

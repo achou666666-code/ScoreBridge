@@ -1,5 +1,28 @@
 # Live editor verification
 
+## Plugin 2.3 written key signatures, September 15, 2026
+
+Verified on MuseScore 4.7.4 (the offered 4.7.5 update was not installed).
+The implementation uses the v4.7.4 API's KeySig.concertKey/actualKey,
+Staff.transpose(Fraction), and cursor.add. Source references are
+src/engraving/api/v1/elements.h, cursor.cpp, apistructs.h and
+src/engraving/dom/staff.cpp and keysig.cpp in the upstream v4.7.4 tag.
+
+A real batch saved these (written, concert) fifth counts:
+
+- Flute, measure 1: (-3, -3).
+- B-flat clarinet, measure 1: (-1, -3).
+- F horn, measure 1: (-2, -3).
+- B-flat clarinet, measure 2: (2, 0), replacing the previous key.
+
+A desktop screenshot confirmed the visible 3/1/2 flats and the clarinet's later
+2 sharps. Saved MSCZ inspection found exactly one key per target position. All
+notes retained their pitch/tpc/tpc2 values; both piano staves' XML was unchanged
+from a pre-test backup. Repeating the clarinet measure-2 setting returned
+changed:false. Out-of-range measures, staves and fifth counts returned errors.
+These checks cover written-pitch display and these instruments, not arbitrary
+custom keys or all transposing instruments. No listening test was performed.
+
 ## Plugin 2.2 articulation/slur batch, September 14, 2026
 
 Reloaded MuseScore and activated the installed plugin through the desktop UI;

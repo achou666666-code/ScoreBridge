@@ -26,6 +26,7 @@ Audiveris is optional assistance, not the default recognition engine.
 - Bundled plugin 2.1: `selectCustomRange`, `addDynamic`, `addTechniqueText`, and `save` can run together in `processSequence`. Range staff indices are zero-based; `endStaff` is exclusive.
 - Bundled plugin 2.2 supports `addArticulation` (staccato, marcato, tenuto) and `addSlur` in batches. Select a single staff range containing notes; slurs require at least two chord positions in one voice. Articulation actions toggle existing marks, so preserve completed step IDs and avoid replaying them.
 - `addDynamic` writes standard engraved dynamics and playback values. `addTechniqueText` writes staff text such as `pizz.`, `arco`, and `con sord.`; text alone does not switch playback techniques.
+- Bundled plugin 2.3: `setKeySignature({staff: 1, measure: 2, fifths: -1})` sets the printed key on one pitched staff. Staff is zero-based, measure is one-based, negative fifths means flats and positive means sharps. Supply the PDF's written key directly; the tool handles the internal concert key. Keep concert-pitch display off. This changes the key signature, not note pitches.
 - `musescore_websocket_command`: execute one plugin-supported command; plugin errors propagate.
 - `musescore_execute_plan`: ordered JSON command plan with completed IDs on failure. CLI: `scorebridge execute-plan PLAN.json`.
 - `score_finalize`: legacy Score IR compilation route delivering MSCZ, with temporary XML and audit data under `.scorebridge/`.

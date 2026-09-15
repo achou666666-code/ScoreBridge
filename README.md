@@ -95,6 +95,14 @@ need notes, and slurs need at least two chord positions in one voice. Live tests
 verified saved symbols, slur endpoints, and isolation from other staves.
 Articulation actions toggle existing markings: do not blindly replay a batch.
 Cross-staff and mixed-voice slurs are outside this command's supported scope.
+Bundled plugin 2.3 adds `setKeySignature({staff: 1, measure: 2, fifths: -1})`.
+Use the printed key: negative numbers count flats, positive numbers count sharps,
+and zero is no sharps/flats. Staff indices start at zero; measures start at one.
+The plugin derives the concert key from the staff's transposition and writes both
+values without transposing notes. It edits one staff at a measure start, replaces
+an existing signature, and skips an identical setting. Written-pitch display must
+be active. Standard keys from seven flats to seven sharps are supported; custom
+microtonal signatures are outside this command's scope.
 See `tests/LIVE_EDITOR_RESULTS.md` for the scope of live verification.
 
 ## Agent entry point
