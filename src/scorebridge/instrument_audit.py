@@ -1,5 +1,6 @@
 """Shared playback-instrument audit for CLI and MCP entry points."""
-from .instruments import instrument_spec
+from .instruments import INSTRUMENTS, instrument_spec
+from .instrument_names import resolve_instrument_name
 
 
 def audit_instruments(score) -> dict:
@@ -23,7 +24,7 @@ def audit_instruments(score) -> dict:
         "parts": parts,
         "unresolved_instrument_ids": unresolved,
         "piano_fallback_detected": any(
-            item["instrument_id"] != "keyboard.piano"
+            resolve_instrument_name(item["instrument_id"], INSTRUMENTS) != "keyboard.piano"
             and item["instrument_sound"] == "keyboard.piano"
             for item in parts
         ),

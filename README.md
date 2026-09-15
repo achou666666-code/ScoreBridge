@@ -158,6 +158,20 @@ their intermediate files are not the default user delivery.
 .venv/bin/pytest -q
 ```
 
+To check what another computer receives from Git, run:
+
+```bash
+python3 scripts/check_clean_install.py
+```
+
+This exports HEAD into a temporary directory, creates a fresh virtual environment,
+installs the package and test extras, and runs the exported tests against the
+installed package. It excludes uncommitted source changes and existing editable
+installs. It needs network access for dependencies and Node.js for QML JavaScript
+tests. The GitHub Actions workflow runs this check on pushes and pull requests.
+Local-only orchestral evidence is skipped when absent; desktop MuseScore and
+listening tests are separate from this installation check.
+
 Tests include a local WebSocket server for both wire formats, nested plugin
 errors, partial-plan failures without replay, input preparation without OMR,
 and compilation checks. These protocol tests are distinct from real MuseScore
