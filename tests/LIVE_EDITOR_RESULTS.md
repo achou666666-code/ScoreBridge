@@ -1,5 +1,27 @@
 # Live editor verification
 
+## Plugin 2.4 page layout, September 16, 2026
+
+On MuseScore 4.7.4, setPageLayout set A4 (210 x 297 mm), left/right margins
+18/12 mm and top/bottom margins 20/16 mm. After saving, restarting MuseScore and
+reopening the MSCZ, getPageLayout returned these values within 0.001 mm.
+
+The initial break call failed because the internal C++ enum name LayoutBreakType
+is not exposed under that name in QML. Upstream v4.7.4 qmlpluginapi.h declares
+LayoutBreak; after correcting it and reloading, a batch set a page break after
+measure 1 and saved. getPageLayout reported two pages; a desktop screenshot showed
+the first measure on page 1 and the beginning of page 2 separately.
+
+Subsequent page -> line -> none -> page edits saved exactly one matching LayoutBreak
+(or none) in MSCZ. Repeating the same page break returned changed:false. Note
+pitches, durations and existing markings matched the pre-test snapshot. Margins
+exceeding the paper width were rejected with no change to the read-back layout.
+
+These checks verify manual page controls, not automatic engraving quality or
+source-layout matching. The source API evidence is v4.7.4 style/styledef.cpp
+(inch units), api/v1/style.h (setValue), elements.cpp (MeasureBase add/remove),
+and qmlpluginapi.h (public LayoutBreak enum).
+
 ## Plugin 2.3 written key signatures, September 15, 2026
 
 Verified on MuseScore 4.7.4 (the offered 4.7.5 update was not installed).

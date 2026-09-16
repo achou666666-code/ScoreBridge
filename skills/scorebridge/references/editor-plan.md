@@ -65,3 +65,25 @@ setting returns changed:false. A new setting replaces the signature at that
 position without transposing existing notes. It affects the selected staff only.
 Use written-pitch display and conventional keys (-7 through +7); percussion and
 custom key signatures need another route. The target must be a measure start.
+
+## Page layout (bundled plugin 2.4)
+
+The Agent decides page dimensions and break positions from the source or desired
+layout; these commands execute those decisions. For A4 with custom margins:
+
+```json
+{"steps":[
+  {"id":"page-size","action":"setPageLayout","params":{"widthMm":210,"heightMm":297,"leftMm":18,"rightMm":12,"topMm":20,"bottomMm":16}},
+  {"id":"break-m4","action":"setLayoutBreak","params":{"measure":4,"type":"page"}},
+  {"id":"save-layout","action":"save"}
+]}
+```
+
+All six page values are required, in millimeters. Margins must leave a positive
+printable area. The same margins apply to odd and even pages (not mirrored).
+`setLayoutBreak` applies score-wide after the one-based measure; types are line,
+page, none. It replaces an existing layout break and skips an identical one;
+section breaks are not removed because they can carry musical settings.
+Call `getPageLayout` after the edits finish to read the new page count. The saved
+style may round dimensions slightly. These commands do not handle staff sizing,
+collision correction, or automatic page-for-page replication of a source.

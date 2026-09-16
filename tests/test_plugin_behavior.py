@@ -190,3 +190,79 @@ def test_key_requires_written_display():
     setup = 'var curScore={nstaves:1,style:{value(){return true;}}};'
     assert 'concert pitch' in run_function('setKeySignature', setup,
         'setKeySignature({staff:0,measure:1,fifths:0})')['error']
+
+
+@pytest.mark.parametrize('params', [None, {}, {'widthMm': '210'},
+    {'widthMm': -1}, {'widthMm': float('inf')},
+    dict(widthMm=210, heightMm=297, leftMm=110, rightMm=110, topMm=20, bottomMm=16),
+    dict(widthMm=210, heightMm=297, leftMm=18, rightMm=12, topMm=150, bottomMm=147),
+])
+def test_invalid_page_settings_never_enter_edit(params):
+    assert run_function('setPageLayout', 'var curScore={};',
+        'setPageLayout(' + json.dumps(params) + ')')['error']
+
+
+def test_page_settings_convert_millimeters_and_update_both_page_margins():
+    setup = '''
+var values={};
+var curScore={style:{setValue(k,v){values[k]=v;},value(k){return values[k];}}};
+function executeWithUndo(f){return f();}
+function getPageLayout(){return {};}
+'''
+    result = run_function('setPageLayout', setup,
+        '({report:setPageLayout({widthMm:210,heightMm:297,leftMm:18,rightMm:12,topMm:20,bottomMm:16}),values:values})')
+    assert result['report']['success'] is True
+    expected = dict(pageWidth=210, pageHeight=297, pagePrintableWidth=180,
+        pageOddLeftMargin=18, pageEvenLeftMargin=18,
+        pageOddTopMargin=20, pageEvenTopMargin=20,
+        pageOddBottomMargin=16, pageEvenBottomMargin=16)
+    assert result['values'] == pytest.approx({k: v/25.4 for k, v in expected.items()})
+
+
+def test_page_write_mismatch_is_not_reported_as_success():
+    setup = '''
+var curScore={style:{setValue(){},value(){return 0;}}};
+function executeWithUndo(f){try{return f();}catch(e){return {error:String(e)};}}
+'''
+    assert run_function('setPageLayout', setup,
+        'setPageLayout({widthMm:210,heightMm:297,leftMm:18,rightMm:12,topMm:20,bottomMm:16})')['error']
+
+
+@pytest.mark.parametrize('existing,kind,changed,expected', [
+    ([], 'page', True, [0]), ([0], 'page', False, [0]),
+    ([0], 'line', True, [1]), ([1], 'none', True, []),
+    ([], 'none', False, []), ([0, 1], 'page', True, [0]),
+])
+def test_layout_break_replacement_deduplication_and_removal(existing, kind, changed, expected):
+    setup = '''
+var Element={LAYOUT_BREAK:1}, LayoutBreak={PAGE:0,LINE:1,SECTION:2};
+var untouched={type:99};
+var measure={elements:EXISTING.map(t=>({type:1,layoutBreakType:t})).concat([untouched]),
+remove(e){this.elements.splice(this.elements.indexOf(e),1);},add(e){this.elements.push(e);}};
+var curScore={};
+function createCursor(){return {measure:measure};}
+function executeWithUndo(f){return f();}
+function newElement(t){return {type:t};}
+'''.replace('EXISTING', json.dumps(existing))
+    result = run_function('setLayoutBreak', setup,
+        '({report:setLayoutBreak(' + json.dumps({'measure':1,'type':kind}) + '),elements:measure.elements})')
+    assert result['report']['changed'] is changed
+    assert [e['layoutBreakType'] for e in result['elements'] if e['type']==1] == expected
+    assert {'type':99} in result['elements']
+
+
+def test_section_break_is_preserved():
+    setup = '''
+var Element={LAYOUT_BREAK:1}, LayoutBreak={SECTION:2}, curScore={};
+function createCursor(){return {measure:{elements:[{type:1,layoutBreakType:2}]}};}
+'''
+    assert 'section break' in run_function('setLayoutBreak', setup,
+        'setLayoutBreak({measure:1,type:"page"})')['error']
+
+
+def test_layout_commands_dispatch_in_sequence():
+    result = run_function('processSequence',
+        'var curScore={},selectionState={},calls=[];function processCommand(c){calls.push(c.action);return {success:true};}',
+        '({report:processSequence({sequence:[{action:"setPageLayout"},{action:"setLayoutBreak"},{action:"save"},{action:"getPageLayout"}]}),calls:calls})')
+    assert result['calls'] == ['setPageLayout', 'setLayoutBreak', 'save', 'getPageLayout']
+    assert result['report']['completedIndices'] == [0, 1, 2, 3]

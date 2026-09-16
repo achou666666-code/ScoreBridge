@@ -5,7 +5,7 @@ MuseScore {
     id: root
     menuPath: "Plugins.MuseScore API Server"
     description: "Exposes MuseScore API via WebSocket (Clean Version)"
-    version: "2.3"
+    version: "2.4"
     
     property var clientConnections: []
     property var selectionState: ({
@@ -87,6 +87,9 @@ MuseScore {
             case "setStaffMute":            return setStaffMute(command.params);
             case "setStaffVisible":         return setStaffVisible(command.params);
             case "setInstrumentSound":      return setInstrumentSound(command.params);
+            case "getPageLayout":           return getPageLayout();
+            case "setPageLayout":           return setPageLayout(command.params);
+            case "setLayoutBreak":          return setLayoutBreak(command.params);
             case "setKeySignature":         return setKeySignature(command.params);
             case "setTimeSignature":        return setTimeSignature(command.params);
             case "setTempo":                return setTempo(command.params);
@@ -313,6 +316,7 @@ MuseScore {
                 "selectCustomRange", "processSequence", "addNote",
                 "addRest", "addTuplet", "addLyrics", "appendMeasure",
                 "insertMeasure", "deleteSelection", "addInstrument",
+                "getPageLayout", "setPageLayout", "setLayoutBreak",
                 "setKeySignature", "setTimeSignature", "setTempo", "setStaffVisible",
                 "addDynamic", "addTechniqueText", "addArticulation", "addSlur"
             ],
@@ -340,6 +344,7 @@ MuseScore {
             "addNote", "addRest", "addTuplet", "appendMeasure", "deleteSelection",
             "getCursorInfo", "goToMeasure", "nextElement", "prevElement", "nextStaff", "prevStaff", "save",
             "selectCurrentMeasure", "processSequence", "insertMeasure", "goToFinalMeasure",
+            "getPageLayout", "setPageLayout", "setLayoutBreak",
             "goToBeginningOfScore", "setKeySignature", "setTimeSignature", "addLyrics", "addInstrument",
             "setStaffVisible", "setTempo", "selectCustomRange", "addDynamic", "addTechniqueText", "addArticulation", "addSlur"
         ];
@@ -1163,6 +1168,83 @@ MuseScore {
             return { success: true, message: "Instrument dialog opened, manual selection required" };
         });
         */
+    }
+
+    function getPageLayout() {
+        if (!curScore) return { error: "No score open" };
+        var style = curScore.style;
+        return { widthMm: style.value("pageWidth") * 25.4,
+                 heightMm: style.value("pageHeight") * 25.4,
+                 printableWidthMm: style.value("pagePrintableWidth") * 25.4,
+                 leftMm: style.value("pageOddLeftMargin") * 25.4,
+                 rightMm: (style.value("pageWidth") - style.value("pagePrintableWidth") - style.value("pageOddLeftMargin")) * 25.4,
+                 topMm: style.value("pageOddTopMargin") * 25.4,
+                 bottomMm: style.value("pageOddBottomMargin") * 25.4,
+                 evenLeftMm: style.value("pageEvenLeftMargin") * 25.4,
+                 evenTopMm: style.value("pageEvenTopMargin") * 25.4,
+                 evenBottomMm: style.value("pageEvenBottomMargin") * 25.4,
+                 pageCount: curScore.npages };
+    }
+
+    function setPageLayout(params) {
+        if (!curScore) return { error: "No score open" };
+        var names = ["widthMm", "heightMm", "leftMm", "rightMm", "topMm", "bottomMm"];
+        for (var i = 0; i < names.length; i++) {
+            var value = params && params[names[i]];
+            if (typeof value !== "number" || !isFinite(value) || value < 0)
+                return { error: names[i] + " must be a finite nonnegative number in millimeters" };
+        }
+        if (params.widthMm <= params.leftMm + params.rightMm || params.heightMm <= params.topMm + params.bottomMm)
+            return { error: "Page margins must leave a positive printable area" };
+        return executeWithUndo(function() {
+            var values = {pageWidth: params.widthMm, pageHeight: params.heightMm,
+                pagePrintableWidth: params.widthMm - params.leftMm - params.rightMm,
+                pageOddLeftMargin: params.leftMm, pageEvenLeftMargin: params.leftMm,
+                pageOddTopMargin: params.topMm, pageEvenTopMargin: params.topMm,
+                pageOddBottomMargin: params.bottomMm, pageEvenBottomMargin: params.bottomMm};
+            for (var name in values) {
+                curScore.style.setValue(name, values[name] / 25.4);
+                if (Math.abs(curScore.style.value(name) * 25.4 - values[name]) > 0.001)
+                    throw new Error("Page setting was not applied: " + name);
+            }
+            return { success: true, layout: getPageLayout() };
+        });
+    }
+
+    function setLayoutBreak(params) {
+        if (!curScore) return { error: "No score open" };
+        if (!params || !Number.isInteger(params.measure) || params.measure < 1)
+            return { error: "measure must be a positive one-based measure number" };
+        if (["line", "page", "none"].indexOf(params.type) < 0)
+            return { error: "Layout break type must be line, page, or none" };
+        var cursor = createCursor({startTick: 0, startStaff: 0, voice: 0});
+        for (var i = 1; i < params.measure; i++) {
+            if (!cursor.nextMeasure()) return { error: "Measure is outside the score" };
+        }
+        var measure = cursor.measure;
+        if (!measure) return { error: "No target measure" };
+        var breaks = [];
+        for (var j = 0; j < measure.elements.length; j++) {
+            var item = measure.elements[j];
+            if (item.type === Element.LAYOUT_BREAK) {
+                if (item.layoutBreakType === LayoutBreak.SECTION)
+                    return { error: "A section break exists here; preserve its musical settings" };
+                breaks.push(item);
+            }
+        }
+        var target = params.type === "line" ? LayoutBreak.LINE : LayoutBreak.PAGE;
+        if ((params.type === "none" && !breaks.length) ||
+            (params.type !== "none" && breaks.length === 1 && breaks[0].layoutBreakType === target))
+            return { success: true, changed: false, measure: params.measure, type: params.type };
+        return executeWithUndo(function() {
+            for (var k = 0; k < breaks.length; k++) measure.remove(breaks[k]);
+            if (params.type !== "none") {
+                var br = newElement(Element.LAYOUT_BREAK);
+                br.layoutBreakType = target;
+                measure.add(br);
+            }
+            return { success: true, changed: true, measure: params.measure, type: params.type };
+        });
     }
 
     function writtenToConcertKey(fifths, interval) {

@@ -103,6 +103,13 @@ values without transposing notes. It edits one staff at a measure start, replace
 an existing signature, and skips an identical setting. Written-pitch display must
 be active. Standard keys from seven flats to seven sharps are supported; custom
 microtonal signatures are outside this command's scope.
+Bundled plugin 2.4 adds `getPageLayout`, `setPageLayout`, and `setLayoutBreak`.
+Page dimensions and margins use millimeters; page settings apply equal left/top/
+bottom margins to odd and even pages. Set a break after a one-based measure with
+`setLayoutBreak({measure: 4, type: "line"})`; use `page` for a page break or `none`
+to remove the layout break. Existing section breaks are preserved. Repeated
+identical breaks do not accumulate. These are manual layout controls for the
+Agent, not automatic source-layout matching.
 See `tests/LIVE_EDITOR_RESULTS.md` for the scope of live verification.
 
 ## Agent entry point
