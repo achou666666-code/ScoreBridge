@@ -25,8 +25,10 @@ response separates available `commands` from `reserved_commands`; editor-status
 exposes that response. Upstream mcp-score uses a different `command` protocol;
 the bundled plugin uses `action`. Prefer the connected instance's capabilities
 over an upstream command list. Opening an existing file is handled by
-`musescore_open`; new-score creation, Save As, and direct sound assignment are
-still reserved in the QML plugin.
+`musescore_open`; new-score creation, Save As, and arbitrary audio-resource
+selection are still reserved in the QML plugin. Standard MuseScore instrument
+replacement, including its playback sound, is available through
+`setPartInstrument`.
 
 The range → dynamic → technique text → save batch was verified on MuseScore
 4.7.4 by inspecting the saved MSCZ: `mp` with velocity 64 and the exact staff text
@@ -53,6 +55,28 @@ commands acknowledged, not that a score has been saved or verified musically.
 A notation-only marking and its playback effect are separate checks. An opened
 instrument dialog, a renamed part, or a nonempty audio file does not demonstrate
 a correct instrument assignment.
+
+## Instrument identity and playback (bundled plugin 2.5)
+
+Use `getMidiChannels` to inspect part indices, instrument IDs and channel data.
+To correct a standard instrument, execute for example:
+
+```json
+{"steps":[
+  {"id":"flute-sound","action":"setPartInstrument","params":{"part":0,"instrumentId":"flute"}},
+  {"id":"save-sound","action":"save"}
+]}
+```
+
+`part` is zero-based. `instrumentId` must be an ID from MuseScore's instrument
+catalog, not the visible staff label or a General MIDI number. The command calls
+MuseScore 4.7's instrument-template replacement API, reads the new ID back, and
+fails unknown IDs instead of claiming success. Replacement can change the part's
+name, clef, transposition and playback sound; use it intentionally before writing
+or after auditing imported parts. Raw `setMidiPatch` is reserved: live testing
+showed that its saved MIDI program changed while rendered audio stayed identical.
+Arbitrary MuseSound, VST and SoundFont resource selection remains outside this
+command.
 
 ## Written key signatures (bundled plugin 2.3)
 

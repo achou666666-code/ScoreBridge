@@ -15,8 +15,12 @@ def test_bundled_plugin_exposes_save_command():
     assert 'openScore is not verified for MuseScore 4.7.4' in text
     assert 'saveAs is not verified for MuseScore 4.7.4' in text
     assert 'setStaffMute is not implemented' in text
+    assert 'setMidiPatch does not control MuseScore 4 audio resources' in text
     assert 'setInstrumentSound is not implemented' in text
     assert 'case "setStaffVisible":' in text
+    assert 'case "getMidiChannels":' in text
+    assert 'case "setPartInstrument":' in text
+    assert 'curScore.replaceInstrument(curScore.parts[partIndex], instrumentId)' in text
     assert 'case "setKeySignature":' in text
     assert 'case "addDynamic":' in text
     assert 'case "addArticulation":' in text
@@ -35,3 +39,5 @@ def test_bundled_plugin_exposes_save_command():
     assert '"addArticulation"' in sequence_block
     assert '"addSlur"' in sequence_block
     assert '"addTechniqueText"' in sequence_block
+    assert '"setPartInstrument"' in sequence_block
+    assert '"setMidiPatch"' not in sequence_block

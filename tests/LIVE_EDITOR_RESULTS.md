@@ -1,5 +1,26 @@
 # Live editor verification
 
+## Plugin 2.5 standard instrument playback, September 19, 2026
+
+On MuseScore 4.7.4, `getMidiChannels` read the live flute, B-flat clarinet,
+F horn and piano instrument IDs and their expected MIDI programs. A trial raw
+MIDI change saved flute program 0 in MSCX, but two deterministic WAV exports were
+byte-identical to the flute baseline. `setMidiPatch` is therefore reserved and
+is not presented as playback assignment.
+
+The replacement implementation uses the upstream 4.7 API
+`Score.replaceInstrument(part, instrumentId)`, documented to change the
+instrument definition including name, clef and sound. Replacing part 0 from
+`flute` to `oboe` changed the live ID, name and channel program. The rendered
+WAV retained the same length but differed in 573,438 of 650,474 float samples
+(difference RMS 0.108714). Replacing it back with `flute` restored program 73;
+the restored WAV SHA-256 exactly matched both original baseline renders.
+
+This verifies standard MuseScore instrument-template playback assignment and
+reversibility. It does not implement arbitrary MuseSound, VST, SoundFont or
+per-technique resource selection. The fixture was restored to flute after the
+test and is not included in the source commit.
+
 ## Plugin 2.4 page layout, September 16, 2026
 
 On MuseScore 4.7.4, setPageLayout set A4 (210 x 297 mm), left/right margins

@@ -66,12 +66,18 @@ Protocol detection uses read-only ping; `SCOREBRIDGE_MUSESCORE_PROTOCOL` can for
 editing the score. Restart MuseScore after updating the plugin so QML is reloaded.
 The status response separates verified `commands` from `reserved_commands` that
 are intentionally unavailable on MuseScore 4.7.4.
-Playback mute and direct sound assignment are reserved until they can be verified.
+Playback mute and arbitrary audio-resource assignment remain reserved.
 `setStaffVisible` controls engraving visibility and is never reported as audio mute.
+Bundled plugin 2.5 adds `getMidiChannels` for diagnosis and
+`setPartInstrument({part: 0, instrumentId: "flute"})` for replacing a part with
+a standard MuseScore instrument template. This updates notation defaults and the
+playback sound. Raw MIDI program changes are not advertised as sound assignment:
+MuseScore 4 can retain the same audio resource after a MIDI program edit.
 
 The current live bridge edits and saves an already-open score. New-score creation,
-opening a path, Save As, and automatic instrument sound assignment remain pending
-for MuseScore 4.7.4. The lifecycle command names are reserved and return a clear
+opening a path, Save As, and arbitrary MuseSound/VST resource selection remain
+pending for MuseScore 4.7.4. Standard instrument replacement is available through
+`setPartInstrument`. The lifecycle command names are reserved and return a clear
 unsupported result until a version-tested implementation is available; ScoreBridge
 does not claim those operations succeeded.
 
@@ -110,6 +116,13 @@ bottom margins to odd and even pages. Set a break after a one-based measure with
 to remove the layout break. Existing section breaks are preserved. Repeated
 identical breaks do not accumulate. These are manual layout controls for the
 Agent, not automatic source-layout matching.
+Bundled plugin 2.5 adds `setPartInstrument`. Use a zero-based part index and a
+real MuseScore instrument ID such as `flute`, `oboe`, `bb-clarinet`, `horn`, or
+`piano`. The command verifies the resulting instrument ID before reporting
+success and skips an identical assignment. Live verification replaced flute
+with oboe, produced different rendered audio, then restored flute and reproduced
+the original WAV byte for byte. This establishes standard-template playback
+assignment; it does not select arbitrary MuseSounds, VSTs, or SoundFonts.
 See `tests/LIVE_EDITOR_RESULTS.md` for the scope of live verification.
 
 ## Agent entry point

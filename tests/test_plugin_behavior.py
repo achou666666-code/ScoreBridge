@@ -266,3 +266,56 @@ def test_layout_commands_dispatch_in_sequence():
         '({report:processSequence({sequence:[{action:"setPageLayout"},{action:"setLayoutBreak"},{action:"save"},{action:"getPageLayout"}]}),calls:calls})')
     assert result['calls'] == ['setPageLayout', 'setLayoutBreak', 'save', 'getPageLayout']
     assert result['report']['completedIndices'] == [0, 1, 2, 3]
+
+
+def test_part_instrument_replacement_uses_musescore_template():
+    setup = '''
+var currentId="flute", undoCalls=0;
+var part={instrumentAtTick(){return {instrumentId:currentId};}};
+var curScore={parts:[part],replaceInstrument(target,id){if(target!==part)throw Error("wrong part");currentId=id;}};
+function executeWithUndo(f){undoCalls++;return f();}
+'''
+    result = run_function('setPartInstrument', setup,
+        '({report:setPartInstrument({part:0,instrumentId:"oboe"}),actual:currentId,undoCalls:undoCalls})')
+    assert result['report'] == {
+        'success': True, 'changed': True, 'part': 0,
+        'previousInstrumentId': 'flute', 'instrumentId': 'oboe',
+        'scope': 'MuseScore instrument template, notation defaults, and playback sound',
+    }
+    assert result['actual'] == 'oboe'
+    assert result['undoCalls'] == 1
+
+
+def test_unknown_part_instrument_is_not_reported_as_success():
+    setup = '''
+var currentId="flute";
+var part={instrumentAtTick(){return {instrumentId:currentId};}};
+var curScore={parts:[part],replaceInstrument(){}};
+function executeWithUndo(f){try{return f();}catch(e){return {error:String(e)};}}
+'''
+    result = run_function('setPartInstrument', setup,
+        'setPartInstrument({part:0,instrumentId:"not-a-real-instrument"})')
+    assert 'unknown instrumentId' in result['error']
+
+
+def test_identical_part_instrument_skips_editor_command():
+    setup = '''
+var curScore={parts:[{instrumentAtTick(){return {instrumentId:"flute"};}}],replaceInstrument(){throw Error("must not edit");}};
+function executeWithUndo(){throw Error("must not enter undo");}
+'''
+    result = run_function('setPartInstrument', setup,
+        'setPartInstrument({part:0,instrumentId:"flute"})')
+    assert result == {'success': True, 'changed': False, 'part': 0, 'instrumentId': 'flute'}
+
+
+def test_midi_patch_is_explicitly_not_an_audio_assignment():
+    result = run_function('setMidiPatch', '', 'setMidiPatch({part:0,program:0})')
+    assert 'does not control MuseScore 4 audio resources' in result['error']
+
+
+def test_sequence_accepts_part_instrument_replacement():
+    result = run_function('processSequence',
+        'var curScore={},selectionState={},calls=[];function processCommand(c){calls.push(c.action);return {success:true};}',
+        '({report:processSequence({sequence:[{action:"setPartInstrument",params:{part:0,instrumentId:"flute"}},{action:"save"}]}),calls:calls})')
+    assert result['calls'] == ['setPartInstrument', 'save']
+    assert result['report']['completedIndices'] == [0, 1]

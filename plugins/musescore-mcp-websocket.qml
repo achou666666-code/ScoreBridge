@@ -5,7 +5,7 @@ MuseScore {
     id: root
     menuPath: "Plugins.MuseScore API Server"
     description: "Exposes MuseScore API via WebSocket (Clean Version)"
-    version: "2.4"
+    version: "2.5"
     
     property var clientConnections: []
     property var selectionState: ({
@@ -86,6 +86,9 @@ MuseScore {
             case "addInstrument":           return addInstrument(command.params);
             case "setStaffMute":            return setStaffMute(command.params);
             case "setStaffVisible":         return setStaffVisible(command.params);
+            case "getMidiChannels":         return getMidiChannels(command.params);
+            case "setMidiPatch":            return setMidiPatch(command.params);
+            case "setPartInstrument":       return setPartInstrument(command.params);
             case "setInstrumentSound":      return setInstrumentSound(command.params);
             case "getPageLayout":           return getPageLayout();
             case "setPageLayout":           return setPageLayout(command.params);
@@ -316,12 +319,13 @@ MuseScore {
                 "selectCustomRange", "processSequence", "addNote",
                 "addRest", "addTuplet", "addLyrics", "appendMeasure",
                 "insertMeasure", "deleteSelection", "addInstrument",
+                "getMidiChannels", "setPartInstrument",
                 "getPageLayout", "setPageLayout", "setLayoutBreak",
                 "setKeySignature", "setTimeSignature", "setTempo", "setStaffVisible",
                 "addDynamic", "addTechniqueText", "addArticulation", "addSlur"
             ],
             reserved_commands: ["createScore", "openScore", "saveAs",
-                                "setStaffMute", "setInstrumentSound"]
+                                "setStaffMute", "setMidiPatch", "setInstrumentSound"]
         };
     }
 
@@ -344,6 +348,7 @@ MuseScore {
             "addNote", "addRest", "addTuplet", "appendMeasure", "deleteSelection",
             "getCursorInfo", "goToMeasure", "nextElement", "prevElement", "nextStaff", "prevStaff", "save",
             "selectCurrentMeasure", "processSequence", "insertMeasure", "goToFinalMeasure",
+            "getMidiChannels", "setPartInstrument",
             "getPageLayout", "setPageLayout", "setLayoutBreak",
             "goToBeginningOfScore", "setKeySignature", "setTimeSignature", "addLyrics", "addInstrument",
             "setStaffVisible", "setTempo", "selectCustomRange", "addDynamic", "addTechniqueText", "addArticulation", "addSlur"
@@ -1154,6 +1159,55 @@ MuseScore {
             if (!staff) return { error: "Staff not found" };
             staff.invisible = !Boolean(params.visible);
             return { success: true, message: "Staff visibility updated" };
+        });
+    }
+
+    function getMidiChannels(params) {
+        if (!curScore) return { error: "No score open" };
+        var tick = params && params.tick !== undefined ? params.tick : 0;
+        if (!Number.isInteger(tick) || tick < 0) return { error: "tick must be a nonnegative integer" };
+        var parts = [];
+        for (var i = 0; i < curScore.parts.length; i++) {
+            var instrument = curScore.parts[i].instrumentAtTick(tick);
+            var channels = [];
+            if (instrument) {
+                for (var j = 0; j < instrument.channels.length; j++) {
+                    var channel = instrument.channels[j];
+                    channels.push({channel: j, name: channel.name,
+                                   program: channel.midiProgram, bank: channel.midiBank});
+                }
+            }
+            parts.push({part: i, instrumentId: instrument ? instrument.instrumentId : null,
+                        name: instrument ? instrument.longName : null, channels: channels});
+        }
+        return { tick: tick, parts: parts, scope: "Notation MIDI channels; audio resource selection is separate" };
+    }
+
+    function setMidiPatch(params) {
+        return { error: "setMidiPatch does not control MuseScore 4 audio resources; use setPartInstrument" };
+    }
+
+    function setPartInstrument(params) {
+        if (!curScore) return { error: "No score open" };
+        if (!params || !Number.isInteger(params.part) || params.part < 0 || params.part >= curScore.parts.length)
+            return { error: "part must be a valid zero-based part index" };
+        if (typeof params.instrumentId !== "string" || !params.instrumentId.trim())
+            return { error: "instrumentId must be a nonempty MuseScore instrument ID" };
+        var partIndex = params.part;
+        var instrumentId = params.instrumentId.trim();
+        var current = curScore.parts[partIndex].instrumentAtTick(0);
+        var previousId = current ? current.instrumentId : null;
+        if (previousId === instrumentId)
+            return { success: true, changed: false, part: partIndex, instrumentId: instrumentId };
+        return executeWithUndo(function() {
+            curScore.replaceInstrument(curScore.parts[partIndex], instrumentId);
+            var updated = curScore.parts[partIndex].instrumentAtTick(0);
+            var actualId = updated ? updated.instrumentId : null;
+            if (actualId !== instrumentId)
+                throw new Error("Instrument replacement failed; unknown instrumentId: " + instrumentId);
+            return { success: true, changed: true, part: partIndex,
+                     previousInstrumentId: previousId, instrumentId: actualId,
+                     scope: "MuseScore instrument template, notation defaults, and playback sound" };
         });
     }
 
