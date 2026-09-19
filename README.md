@@ -131,6 +131,12 @@ to the immediate next chord in the same staff and voice and refuses mismatched
 targets. Live verification saved two dotted-quarter triads with exact TPC spelling,
 a C-to-C tie, and an independent voice-2 note while leaving the other four staves
 unchanged.
+Bundled plugin 2.7 makes `addRest` and `addTuplet` deterministic. Both accept an
+explicit staff, voice, absolute tick and whole-note duration. `addRest` verifies
+the resulting rest and supports empty secondary voices. `addTuplet` additionally
+accepts an explicit ratio such as 3:2, verifies the created ratio and reports its
+actual total duration. Live MuseScore 4.7.4 verification saved a quarter rest in
+voice 3 and a quarter-duration eighth-note triplet in voice 4.
 See `tests/LIVE_EDITOR_RESULTS.md` for the scope of live verification.
 
 ## Agent entry point

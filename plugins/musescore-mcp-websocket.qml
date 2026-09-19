@@ -5,7 +5,7 @@ MuseScore {
     id: root
     menuPath: "Plugins.MuseScore API Server"
     description: "Exposes MuseScore API via WebSocket (Clean Version)"
-    version: "2.6"
+    version: "2.7"
     
     property var clientConnections: []
     property var selectionState: ({
@@ -109,6 +109,7 @@ MuseScore {
     // ========================================
 
     function validateParams(params, required) {
+        if (!params) return { error: "Missing required parameters: " + required.join(", ") };
         var missing = [];
         for (var i = 0; i < required.length; i++) {
             if (params[required[i]] === undefined) {
@@ -955,87 +956,96 @@ MuseScore {
     }
 
     function addRest(params) {
-        var validation = validateParams(params, ["duration", "advanceCursorAfterAction"]);
-        if (!validation.valid) return validation;
-
-        if (!params.duration.numerator || !params.duration.denominator) {
-            return { error: "Duration must be specified as { numerator: int, denominator: int }" };
-        }
-
+        if (!curScore) return { error: "No score open" };
+        params = params || {};
+        var staff = params.staff !== undefined ? params.staff : selectionState.startStaff;
+        var voice = params.voice !== undefined ? params.voice : 0;
+        var startTick = params.startTick !== undefined ? params.startTick : selectionState.startTick;
+        if (!Number.isInteger(staff) || staff < 0 || staff >= curScore.nstaves)
+            return { error: "staff must be a valid zero-based staff index" };
+        if (!Number.isInteger(voice) || voice < 0 || voice > 3)
+            return { error: "voice must be an integer from 0 to 3" };
+        if (!Number.isInteger(startTick) || startTick < 0)
+            return { error: "startTick must be a nonnegative integer" };
+        if (!params.duration || !Number.isInteger(params.duration.numerator) ||
+            !Number.isInteger(params.duration.denominator) || params.duration.numerator <= 0 ||
+            params.duration.denominator <= 0)
+            return { error: "duration must contain positive integer numerator and denominator" };
         return executeWithUndo(function() {
-            syncStateToSelection();
-            
-            var cursorParams = {};
-            if (params.staff !== undefined) cursorParams.startStaff = params.staff;
-            if (params.startTick !== undefined) cursorParams.startTick = params.startTick;
-            var cursor = createCursor(cursorParams);
+            // Find the rhythmic position before selecting the voice. This also
+            // lets MuseScore expand an empty secondary voice when addRest runs.
+            var cursor = createCursor({startStaff: staff, startTick: startTick});
+            if (cursor.tick !== startTick)
+                throw new Error("No score position exists at startTick " + startTick);
+            cursor.voice = voice;
             cursor.setDuration(params.duration.numerator, params.duration.denominator);
             cursor.addRest();
-            cursor.rewindToTick(selectionState.startTick);
-
-            if (params.advanceCursorAfterAction) {
-                cursor.next();
-            }
-
-            var element = processElement(cursor.element);
-            var startTick = cursor.tick;
-            var staffIdx = cursor.staffIdx;
-
+            cursor.rewindToTick(startTick);
+            if (!cursor.element || cursor.element.type !== Element.REST)
+                throw new Error("MuseScore did not create a rest at the requested position");
+            var durationTicks = cursor.element.actualDuration ? cursor.element.actualDuration.ticks : 0;
+            if (durationTicks <= 0) throw new Error("MuseScore created a zero-duration rest");
             curScore.selection.clear();
-            curScore.selection.selectRange(startTick, startTick + element.durationTicks, staffIdx, staffIdx + 1);
-
+            curScore.selection.selectRange(startTick, startTick + durationTicks, staff, staff + 1);
             selectionState = {
-                startStaff: staffIdx,
-                endStaff: staffIdx + 1,
+                startStaff: staff,
+                endStaff: staff + 1,
                 startTick: startTick,
-                elements: [element],
-                totalDuration: element.durationTicks
+                elements: [processElement(cursor.element)],
+                totalDuration: durationTicks
             };
-
-            return { success: true, message: "Rest added", currentSelection: selectionState };
+            return {success: true, changed: true, staff: staff, voice: voice,
+                    startTick: startTick, durationTicks: durationTicks,
+                    currentSelection: selectionState};
         });
     }
 
     function addTuplet(params) {
-        var validation = validateParams(params, ["ratio", "duration", "advanceCursorAfterAction"]);
-        if (!validation.valid) return validation;
-
-        if (!params.ratio.numerator || !params.ratio.denominator || 
-            !params.duration.numerator || !params.duration.denominator) {
-            return { error: "Ratio and duration must be specified as { numerator: int, denominator: int }" };
-        }
-        
+        if (!curScore) return { error: "No score open" };
+        params = params || {};
+        if (!Number.isInteger(params.staff) || params.staff < 0 || params.staff >= curScore.nstaves)
+            return { error: "staff must be a valid zero-based staff index" };
+        if (!Number.isInteger(params.voice) || params.voice < 0 || params.voice > 3)
+            return { error: "voice must be an integer from 0 to 3" };
+        if (!Number.isInteger(params.startTick) || params.startTick < 0)
+            return { error: "startTick must be a nonnegative integer" };
+        if (!params.ratio || !Number.isInteger(params.ratio.numerator) ||
+            !Number.isInteger(params.ratio.denominator) || params.ratio.numerator <= 0 ||
+            params.ratio.denominator <= 0)
+            return { error: "ratio must contain positive integer numerator and denominator" };
+        if (!params.duration || !Number.isInteger(params.duration.numerator) ||
+            !Number.isInteger(params.duration.denominator) || params.duration.numerator <= 0 ||
+            params.duration.denominator <= 0)
+            return { error: "duration must contain positive integer numerator and denominator" };
         return executeWithUndo(function() {
-            var cursor = createCursor();
+            var cursor = createCursor({startStaff: params.staff, startTick: params.startTick});
+            if (cursor.tick !== params.startTick)
+                throw new Error("No score position exists at startTick " + params.startTick);
+            cursor.voice = params.voice;
             cursor.setDuration(params.duration.numerator, params.duration.denominator);
-            
             var ratio = fraction(params.ratio.numerator, params.ratio.denominator);
             var duration = fraction(params.duration.numerator, params.duration.denominator);
-            
             cursor.addTuplet(ratio, duration);
-            cursor.next();
-
-            if (params.advanceCursorAfterAction) {
-                cursor.next();
-            }
-
-            var element = processElement(cursor.element);
-            var startTick = cursor.tick;
-            var staffIdx = cursor.staffIdx;
-
-            selectionState = {
-                startStaff: staffIdx,
-                endStaff: staffIdx + 1,
-                startTick: startTick,
-                elements: [element],
-                totalDuration: element.durationTicks
-            };
-
-            return { 
-                success: true, 
-                message: "Tuplet " + params.ratio.numerator + ":" + params.ratio.denominator + " added",
-                currentSelection: selectionState
-            };
+            cursor.rewindToTick(params.startTick);
+            var element = cursor.element;
+            if (!element || !element.tuplet)
+                throw new Error("MuseScore did not create a tuplet at the requested position");
+            if (element.tuplet.actualNotes !== params.ratio.numerator ||
+                element.tuplet.normalNotes !== params.ratio.denominator)
+                throw new Error("MuseScore created a different tuplet ratio");
+            var tupletTicks = element.tuplet.actualDuration ? element.tuplet.actualDuration.ticks : 0;
+            if (tupletTicks <= 0) throw new Error("MuseScore created a zero-duration tuplet");
+            curScore.selection.clear();
+            curScore.selection.selectRange(params.startTick, params.startTick + tupletTicks,
+                                           params.staff, params.staff + 1);
+            selectionState = {startStaff: params.staff, endStaff: params.staff + 1,
+                              startTick: params.startTick, elements: [processElement(element)],
+                              totalDuration: tupletTicks};
+            return {success: true, changed: true, staff: params.staff, voice: params.voice,
+                    startTick: params.startTick, durationTicks: tupletTicks,
+                    ratio: {numerator: element.tuplet.actualNotes,
+                            denominator: element.tuplet.normalNotes},
+                    currentSelection: selectionState};
         });
     }
 

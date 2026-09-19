@@ -1,5 +1,22 @@
 # Live editor verification
 
+## Plugin 2.7 positioned rests and tuplets, September 19, 2026
+
+On MuseScore 4.7.4, `addRest` wrote a quarter rest at tick 0 on staff 0,
+voice 2 (the third voice). `addTuplet` then created a 3:2 tuplet at tick 960 on
+voice 3 with a requested total duration of 1/4. The command read back ratio 3:2
+and 480 ticks. Saved MSCX inspection confirmed a separate third-voice block with
+the requested rest and a separate fourth-voice block containing `normalNotes=2`,
+`actualNotes=3`, three eighth rests and `endTuplet`.
+
+The live batch saved through the plugin. The fixture was then restored from its
+pre-test backup; both files had SHA-256
+`b1011bb5854be7c2d7e7cf941d437893e2a72ee2590d4b44714e7a608b7f94`.
+Automated tests cover explicit staff/voice/tick/duration, invalid inputs, ratio
+verification, selection bounds and null parameter handling. This verifies simple
+same-measure tuplets; nested, cross-measure and beamed-note replacement remain
+outside this result.
+
 ## Plugin 2.6 positioned chords, voices and ties, September 19, 2026
 
 On MuseScore 4.7.4, two `addChord` calls replaced the three quarter rests in the

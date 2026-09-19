@@ -113,6 +113,31 @@ pitch. An existing forward tie returns `changed:false`; a rest or nonmatching
 chord fails without inventing a destination note. For large passages, batch
 positioned chords first, then ties, markings and `save`.
 
+## Precise rests and tuplets (bundled plugin 2.7)
+
+Rests use the same whole-note duration convention as chords:
+
+```json
+{"action":"addRest","params":{"staff":0,"voice":2,"startTick":0,"duration":{"numerator":1,"denominator":4}}}
+```
+
+Staff and voice are zero-based. The command locates the tick before switching
+voice, so it can expand an empty secondary voice, and reads the created rest back
+before reporting success.
+
+Create a quarter-duration 3:2 eighth-note triplet with:
+
+```json
+{"action":"addTuplet","params":{"staff":0,"voice":3,"startTick":960,"ratio":{"numerator":3,"denominator":2},"duration":{"numerator":1,"denominator":4}}}
+```
+
+`ratio.numerator` is the actual note count and `ratio.denominator` is the normal
+count occupying the same span. `duration` is the total tuplet span. MuseScore
+initially fills the container with rests; write the member notes/rests afterward
+at their score ticks. The command rejects invalid positions and ratios, then
+verifies MuseScore's actual/normal note counts and total duration. Cross-measure
+and nested tuplets remain outside the verified scope.
+
 ## Written key signatures (bundled plugin 2.3)
 
 Use `setKeySignature` in a plan with explicit `staff`, `measure`, and `fifths`.

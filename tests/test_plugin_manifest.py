@@ -25,6 +25,8 @@ def test_bundled_plugin_exposes_save_command():
     assert 'case "addDynamic":' in text
     assert 'case "addChord":' in text
     assert 'case "addTie":' in text
+    assert 'case "addRest":' in text
+    assert 'case "addTuplet":' in text
     assert 'case "addArticulation":' in text
     assert 'case "addSlur":' in text
     assert 'staccato: "add-staccato"' in text
@@ -45,3 +47,5 @@ def test_bundled_plugin_exposes_save_command():
     assert '"setMidiPatch"' not in sequence_block
     assert '"addChord"' in sequence_block
     assert '"addTie"' in sequence_block
+    assert '"addRest"' in sequence_block
+    assert '"addTuplet"' in sequence_block

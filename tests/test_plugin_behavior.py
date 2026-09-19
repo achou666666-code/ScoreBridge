@@ -411,3 +411,82 @@ def test_sequence_accepts_chords_and_ties():
         '({report:processSequence({sequence:[{action:"addChord"},{action:"addTie"},{action:"save"}]}),calls:calls})')
     assert result['calls'] == ['addChord', 'addTie', 'save']
     assert result['report']['completedIndices'] == [0, 1, 2]
+
+
+def test_rest_writes_explicit_voice_position_and_duration():
+    setup = '''
+var Element={REST:2}, selectionState={startStaff:0,startTick:0}, added=false;
+var rest={type:2,name:"Rest",actualDuration:{ticks:480},tuplet:null};
+var cursor={tick:960,voice:0,element:null,
+  setDuration(n,d){if(n!==1||d!==4)throw Error("wrong duration");},
+  addRest(){if(this.voice!==3)throw Error("wrong voice");added=true;this.element=rest;},
+  rewindToTick(t){if(t!==960)throw Error("wrong rewind");this.tick=t;if(added)this.element=rest;}};
+var curScore={nstaves:2,newCursor(){return cursor;},selection:{clear(){},selectRange(a,b,c,d){
+  if(a!==960||b!==1440||c!==1||d!==2)throw Error("wrong selection");}}};
+var Cursor={INPUT_STATE_SYNC_WITH_SCORE:1};
+function createCursor(p){if(p.startStaff!==1||p.startTick!==960)throw Error("wrong position");return cursor;}
+function executeWithUndo(f){return f();}
+function processElement(e){return {name:e.name,durationTicks:e.actualDuration.ticks};}
+'''
+    result = run_function('addRest', setup,
+        'addRest({staff:1,voice:3,startTick:960,duration:{numerator:1,denominator:4}})')
+    assert result['success'] is True
+    assert result['changed'] is True
+    assert result['staff'] == 1
+    assert result['voice'] == 3
+    assert result['startTick'] == 960
+    assert result['durationTicks'] == 480
+
+
+@pytest.mark.parametrize('params,error', [
+    ({'staff': -1, 'voice': 0, 'startTick': 0, 'duration': {'numerator': 1, 'denominator': 4}}, 'staff'),
+    ({'staff': 0, 'voice': 4, 'startTick': 0, 'duration': {'numerator': 1, 'denominator': 4}}, 'voice'),
+    ({'staff': 0, 'voice': 0, 'startTick': -1, 'duration': {'numerator': 1, 'denominator': 4}}, 'starttick'),
+    ({'staff': 0, 'voice': 0, 'startTick': 0, 'duration': {'numerator': 0, 'denominator': 4}}, 'duration'),
+])
+def test_rest_rejects_invalid_explicit_parameters(params, error):
+    setup = 'var curScore={nstaves:1};var selectionState={startStaff:0,startTick:0};'
+    result = run_function('addRest', setup, 'addRest(' + json.dumps(params) + ')')
+    assert error in result['error'].lower()
+
+
+def test_tuplet_writes_ratio_voice_position_and_total_duration():
+    setup = '''
+var selectionState={}, Element={REST:2};
+var tuplet={actualNotes:3,normalNotes:2,actualDuration:{ticks:960}};
+var rest={type:2,name:"Rest",actualDuration:{ticks:320},tuplet:tuplet};
+var created=false,cursor={tick:1920,voice:0,element:null,
+  setDuration(n,d){if(n!==1||d!==4)throw Error("wrong duration");},
+  addTuplet(r,d){if(this.voice!==2||r.n!==3||r.d!==2||d.n!==1||d.d!==4)throw Error("wrong tuplet");created=true;},
+  rewindToTick(t){if(t!==1920)throw Error("wrong rewind");this.tick=t;if(created)this.element=rest;}};
+var curScore={nstaves:1,selection:{clear(){},selectRange(a,b,c,d){
+  if(a!==1920||b!==2880||c!==0||d!==1)throw Error("wrong selection");}}};
+function createCursor(p){if(p.startStaff!==0||p.startTick!==1920)throw Error("wrong position");return cursor;}
+function fraction(n,d){return {n:n,d:d};}
+function executeWithUndo(f){return f();}
+function processElement(e){return {name:e.name,durationTicks:e.actualDuration.ticks,isTuplet:!!e.tuplet};}
+'''
+    result = run_function('addTuplet', setup,
+        'addTuplet({staff:0,voice:2,startTick:1920,ratio:{numerator:3,denominator:2},duration:{numerator:1,denominator:4}})')
+    assert result['success'] is True
+    assert result['changed'] is True
+    assert result['voice'] == 2
+    assert result['durationTicks'] == 960
+    assert result['ratio'] == {'numerator': 3, 'denominator': 2}
+
+
+@pytest.mark.parametrize('params,error', [
+    ({'staff': 1, 'voice': 0, 'startTick': 0, 'ratio': {'numerator': 3, 'denominator': 2}, 'duration': {'numerator': 1, 'denominator': 4}}, 'staff'),
+    ({'staff': 0, 'voice': -1, 'startTick': 0, 'ratio': {'numerator': 3, 'denominator': 2}, 'duration': {'numerator': 1, 'denominator': 4}}, 'voice'),
+    ({'staff': 0, 'voice': 0, 'startTick': 0, 'ratio': {'numerator': 3, 'denominator': 0}, 'duration': {'numerator': 1, 'denominator': 4}}, 'ratio'),
+    ({'staff': 0, 'voice': 0, 'startTick': 0, 'ratio': {'numerator': 3, 'denominator': 2}, 'duration': {'numerator': 1, 'denominator': 0}}, 'duration'),
+])
+def test_tuplet_rejects_invalid_explicit_parameters(params, error):
+    result = run_function('addTuplet', 'var curScore={nstaves:1};',
+                          'addTuplet(' + json.dumps(params) + ')')
+    assert error in result['error'].lower()
+
+
+def test_validate_params_returns_structured_error_for_null():
+    result = run_function('validateParams', '', 'validateParams(null,["duration"])')
+    assert result == {'error': 'Missing required parameters: duration'}
