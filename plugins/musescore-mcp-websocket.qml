@@ -5,7 +5,7 @@ MuseScore {
     id: root
     menuPath: "Plugins.MuseScore API Server"
     description: "Exposes MuseScore API via WebSocket (Clean Version)"
-    version: "2.5"
+    version: "2.6"
     
     property var clientConnections: []
     property var selectionState: ({
@@ -69,6 +69,8 @@ MuseScore {
 
             // Notes & Music
             case "addNote":                 return addNote(command.params);
+            case "addChord":                return addChord(command.params);
+            case "addTie":                  return addTie(command.params);
             case "addRest":                 return addRest(command.params);
             case "addTuplet":               return addTuplet(command.params);
             case "addLyrics":               return addLyrics(command.params);
@@ -316,7 +318,7 @@ MuseScore {
                 "goToBeginningOfScore", "getCursorInfo", "goToMeasure",
                 "goToFinalMeasure", "nextElement", "prevElement",
                 "nextStaff", "prevStaff", "selectCurrentMeasure",
-                "selectCustomRange", "processSequence", "addNote",
+                "selectCustomRange", "processSequence", "addNote", "addChord", "addTie",
                 "addRest", "addTuplet", "addLyrics", "appendMeasure",
                 "insertMeasure", "deleteSelection", "addInstrument",
                 "getMidiChannels", "setPartInstrument",
@@ -345,7 +347,7 @@ MuseScore {
 
         var validCommands = [
             "getCapabilities", "getScore",
-            "addNote", "addRest", "addTuplet", "appendMeasure", "deleteSelection",
+            "addNote", "addChord", "addTie", "addRest", "addTuplet", "appendMeasure", "deleteSelection",
             "getCursorInfo", "goToMeasure", "nextElement", "prevElement", "nextStaff", "prevStaff", "save",
             "selectCurrentMeasure", "processSequence", "insertMeasure", "goToFinalMeasure",
             "getMidiChannels", "setPartInstrument",
@@ -773,7 +775,7 @@ MuseScore {
     // ========================================
 
     function addNote(params) {
-        var validation = validateParams(params, ["pitch", "duration", "advanceCursorAfterAction"]);
+        var validation = validateParams(params, ["pitch", "duration"]);
         if (!validation.valid) return validation;
 
         if (!params.duration.numerator || !params.duration.denominator) {
@@ -786,6 +788,7 @@ MuseScore {
             var cursorParams = {};
             if (params.staff !== undefined) cursorParams.startStaff = params.staff;
             if (params.startTick !== undefined) cursorParams.startTick = params.startTick;
+            if (params.voice !== undefined) cursorParams.voice = params.voice;
             var cursor = createCursor(cursorParams);
             cursor.setDuration(params.duration.numerator, params.duration.denominator);
             
@@ -825,6 +828,129 @@ MuseScore {
                 message: "Note added with pitch " + params.pitch,
                 currentSelection: selectionState
             };
+        });
+    }
+
+    function addChord(params) {
+        if (!curScore) return { error: "No score open" };
+        if (!params || !Array.isArray(params.pitches) || params.pitches.length === 0)
+            return { error: "pitches must be a nonempty array of MIDI pitches" };
+        if (!params.duration || !Number.isInteger(params.duration.numerator) ||
+            !Number.isInteger(params.duration.denominator) || params.duration.numerator <= 0 ||
+            params.duration.denominator <= 0)
+            return { error: "duration must contain positive integer numerator and denominator" };
+        var staff = params.staff === undefined ? selectionState.startStaff : params.staff;
+        var voice = params.voice === undefined ? 0 : params.voice;
+        var startTick = params.startTick === undefined ? selectionState.startTick : params.startTick;
+        if (!Number.isInteger(staff) || staff < 0 || staff >= curScore.nstaves)
+            return { error: "staff must be a valid zero-based staff index" };
+        if (!Number.isInteger(voice) || voice < 0 || voice > 3)
+            return { error: "voice must be an integer from 0 to 3" };
+        if (!Number.isInteger(startTick) || startTick < 0)
+            return { error: "startTick must be a nonnegative integer" };
+        var seen = {};
+        for (var i = 0; i < params.pitches.length; i++) {
+            var pitch = params.pitches[i];
+            if (!Number.isInteger(pitch) || pitch < 0 || pitch > 127)
+                return { error: "Every pitch must be an integer from 0 to 127" };
+            if (seen[pitch]) return { error: "Duplicate pitches are not allowed in a chord" };
+            seen[pitch] = true;
+        }
+        if (params.tpcs !== undefined) {
+            if (!Array.isArray(params.tpcs) || params.tpcs.length !== params.pitches.length)
+                return { error: "tpcs must be an array matching pitches" };
+            if (curScore.style.value("concertPitch"))
+                return { error: "Written TPC input requires the score's concert pitch display to be off" };
+            for (var j = 0; j < params.tpcs.length; j++) {
+                if (!Number.isInteger(params.tpcs[j]) || params.tpcs[j] < -1 || params.tpcs[j] > 35)
+                    return { error: "Every TPC must be an integer from -1 to 35" };
+            }
+        }
+        return executeWithUndo(function() {
+            // Locate on the staff before switching voice. An empty secondary voice has
+            // no chord/rest segment for rewindToTick() to find until MuseScore expands it.
+            var cursor = createCursor({startStaff: staff, startTick: startTick});
+            if (cursor.tick !== startTick)
+                throw new Error("No score position exists at startTick " + startTick);
+            cursor.voice = voice;
+            cursor.setDuration(params.duration.numerator, params.duration.denominator);
+            for (var p = 0; p < params.pitches.length; p++) {
+                if (p > 0) cursor.rewindToTick(startTick);
+                cursor.addNote(params.pitches[p], p > 0);
+            }
+            cursor.rewindToTick(startTick);
+            var chord = cursor.element;
+            if (!chord || chord.type !== Element.CHORD)
+                throw new Error("MuseScore did not create a chord at the requested position");
+            var written = [];
+            for (var q = 0; q < params.pitches.length; q++) {
+                var matched = null;
+                for (var n = 0; n < chord.notes.length; n++) {
+                    if (chord.notes[n].pitch === params.pitches[q]) { matched = chord.notes[n]; break; }
+                }
+                if (!matched) throw new Error("MuseScore did not retain pitch " + params.pitches[q]);
+                if (params.tpcs !== undefined) {
+                    matched.tpc = params.tpcs[q];
+                    if (matched.tpc !== params.tpcs[q])
+                        throw new Error("MuseScore did not retain TPC " + params.tpcs[q]);
+                }
+                written.push({pitch: matched.pitch, tpc: matched.tpc});
+            }
+            var durationTicks = chord.actualDuration ? chord.actualDuration.ticks : 0;
+            if (durationTicks <= 0) throw new Error("MuseScore created a zero-duration chord");
+            curScore.selection.clear();
+            curScore.selection.selectRange(startTick, startTick + durationTicks, staff, staff + 1);
+            selectionState = {startStaff: staff, endStaff: staff + 1, startTick: startTick,
+                              elements: [processElement(chord)], totalDuration: durationTicks};
+            return {success: true, changed: true, staff: staff, voice: voice,
+                    startTick: startTick, durationTicks: durationTicks, notes: written,
+                    currentSelection: selectionState};
+        });
+    }
+
+    function addTie(params) {
+        if (!curScore) return { error: "No score open" };
+        if (!params || !Number.isInteger(params.staff) || params.staff < 0 || params.staff >= curScore.nstaves)
+            return { error: "staff must be a valid zero-based staff index" };
+        if (!Number.isInteger(params.voice) || params.voice < 0 || params.voice > 3)
+            return { error: "voice must be an integer from 0 to 3" };
+        if (!Number.isInteger(params.startTick) || params.startTick < 0)
+            return { error: "startTick must be a nonnegative integer" };
+        if (!Number.isInteger(params.pitch) || params.pitch < 0 || params.pitch > 127)
+            return { error: "pitch must be an integer from 0 to 127" };
+        return executeWithUndo(function() {
+            var cursor = createCursor({startStaff: params.staff, voice: params.voice, startTick: params.startTick});
+            if (cursor.tick !== params.startTick || !cursor.element || cursor.element.type !== Element.CHORD)
+                throw new Error("No source chord exists at the requested position");
+            var source = null;
+            for (var i = 0; i < cursor.element.notes.length; i++) {
+                if (cursor.element.notes[i].pitch === params.pitch) { source = cursor.element.notes[i]; break; }
+            }
+            if (!source) throw new Error("Source chord does not contain pitch " + params.pitch);
+            if (source.tieForward)
+                return {success: true, changed: false, staff: params.staff, voice: params.voice,
+                        startTick: params.startTick, pitch: params.pitch};
+            if (!cursor.next() || !cursor.element || cursor.element.type !== Element.CHORD)
+                throw new Error("The next event in this voice is not a chord");
+            var targetTick = cursor.tick;
+            var targetFound = false;
+            for (var j = 0; j < cursor.element.notes.length; j++) {
+                if (cursor.element.notes[j].pitch === params.pitch) { targetFound = true; break; }
+            }
+            if (!targetFound) throw new Error("The next chord does not contain matching pitch " + params.pitch);
+            curScore.selection.clear();
+            curScore.selection.select(source, false);
+            cmd("tie");
+            var verify = createCursor({startStaff: params.staff, voice: params.voice, startTick: params.startTick});
+            var tied = null;
+            for (var k = 0; verify.element && k < verify.element.notes.length; k++) {
+                if (verify.element.notes[k].pitch === params.pitch) { tied = verify.element.notes[k]; break; }
+            }
+            if (!tied || !tied.tieForward || !tied.tieForward.endNote ||
+                tied.tieForward.endNote.pitch !== params.pitch)
+                throw new Error("MuseScore did not create the requested tie");
+            return {success: true, changed: true, staff: params.staff, voice: params.voice,
+                    startTick: params.startTick, endTick: targetTick, pitch: params.pitch};
         });
     }
 

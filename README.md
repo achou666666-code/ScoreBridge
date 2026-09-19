@@ -123,6 +123,14 @@ success and skips an identical assignment. Live verification replaced flute
 with oboe, produced different rendered audio, then restored flute and reproduced
 the original WAV byte for byte. This establishes standard-template playback
 assignment; it does not select arbitrary MuseSounds, VSTs, or SoundFonts.
+Bundled plugin 2.6 adds deterministic `addChord` and `addTie` commands. `addChord`
+accepts an explicit zero-based staff and voice, absolute tick, whole-note duration
+fraction, MIDI pitches, and optional written TPC values. It supports single notes,
+chords, dotted durations, and empty secondary voices. `addTie` connects one pitch
+to the immediate next chord in the same staff and voice and refuses mismatched
+targets. Live verification saved two dotted-quarter triads with exact TPC spelling,
+a C-to-C tie, and an independent voice-2 note while leaving the other four staves
+unchanged.
 See `tests/LIVE_EDITOR_RESULTS.md` for the scope of live verification.
 
 ## Agent entry point

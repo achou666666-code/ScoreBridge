@@ -319,3 +319,95 @@ def test_sequence_accepts_part_instrument_replacement():
         '({report:processSequence({sequence:[{action:"setPartInstrument",params:{part:0,instrumentId:"flute"}},{action:"save"}]}),calls:calls})')
     assert result['calls'] == ['setPartInstrument', 'save']
     assert result['report']['completedIndices'] == [0, 1]
+
+
+def test_chord_writes_voice_duration_pitches_and_written_tpcs():
+    setup = '''
+var Element={CHORD:1}, Sid={concertPitch:1}, selectionState={startStaff:0,startTick:0};
+var notes=[], durations=[], ranges=[];
+var chord={type:1,notes:notes,actualDuration:{ticks:720}};
+var cursor={tick:1920,element:chord,staffIdx:0,voice:0,
+  setDuration(z,n){durations.push([z,n]);},rewindToTick(t){this.tick=t;},
+  addNote(p,stack){notes.push({pitch:p,tpc:99,stack:stack});}};
+var curScore={nstaves:1,style:{value(){return false;}},selection:{clear(){},selectRange(...a){ranges.push(a);}}};
+function createCursor(p){if(p.startStaff!==0||p.voice!==undefined||p.startTick!==1920)throw Error('wrong position');return cursor;}
+function executeWithUndo(f){return f();}
+function processElement(){return {kind:'chord'};}
+'''
+    result = run_function('addChord', setup,
+        '({report:addChord({staff:0,voice:1,startTick:1920,duration:{numerator:3,denominator:8},pitches:[60,64,67],tpcs:[14,18,15]}),durations:durations,ranges:ranges,notes:notes,cursorVoice:cursor.voice})')
+    assert result['report']['success'] is True
+    assert result['report']['durationTicks'] == 720
+    assert result['report']['notes'] == [
+        {'pitch': 60, 'tpc': 14}, {'pitch': 64, 'tpc': 18}, {'pitch': 67, 'tpc': 15},
+    ]
+    assert result['durations'] == [[3, 8]]
+    assert result['ranges'] == [[1920, 2640, 0, 1]]
+    assert [note['stack'] for note in result['notes']] == [False, True, True]
+    assert result['cursorVoice'] == 1
+
+
+@pytest.mark.parametrize('params,error', [
+    (None, 'pitches'),
+    ({'pitches': [], 'duration': {'numerator': 1, 'denominator': 4}}, 'pitches'),
+    ({'pitches': [128], 'duration': {'numerator': 1, 'denominator': 4}}, 'pitch'),
+    ({'pitches': [60, 60], 'duration': {'numerator': 1, 'denominator': 4}}, 'Duplicate'),
+    ({'pitches': [60], 'duration': {'numerator': 0, 'denominator': 4}}, 'duration'),
+    ({'pitches': [60], 'duration': {'numerator': 1, 'denominator': 4}, 'voice': 4}, 'voice'),
+    ({'pitches': [60], 'duration': {'numerator': 1, 'denominator': 4}, 'tpcs': [36]}, 'TPC'),
+])
+def test_chord_rejects_invalid_requests_before_edit(params, error):
+    setup = '''
+var Sid={concertPitch:1},selectionState={startStaff:0,startTick:0};
+var curScore={nstaves:1,style:{value(){return false;}}};
+function executeWithUndo(){throw Error('must not edit');}
+'''
+    result = run_function('addChord', setup, 'addChord(' + json.dumps(params) + ')')
+    assert error.lower() in result['error'].lower()
+
+
+def test_written_tpc_requires_written_pitch_display():
+    setup = '''
+var Sid={concertPitch:1},selectionState={startStaff:0,startTick:0};
+var curScore={nstaves:1,style:{value(){return true;}}};
+'''
+    result = run_function('addChord', setup,
+        'addChord({pitches:[60],tpcs:[14],duration:{numerator:1,denominator:4}})')
+    assert 'concert pitch' in result['error']
+
+
+def test_tie_targets_next_matching_pitch_in_same_voice():
+    setup = '''
+var Element={CHORD:1}, source={pitch:60,tieForward:null}, target={pitch:60};
+var sourceChord={type:1,notes:[source]}, targetChord={type:1,notes:[target]};
+var curScore={nstaves:1,selection:{clear(){},select(note,add){if(note!==source||add!==false)throw Error('wrong selection');}}};
+function cursor(){return {tick:0,element:sourceChord,next(){this.tick=480;this.element=targetChord;return true;}};}
+function createCursor(p){if(p.startStaff!==0||p.voice!==2||p.startTick!==0)throw Error('wrong position');return cursor();}
+function executeWithUndo(f){return f();}
+function cmd(name){if(name!=='tie')throw Error('wrong command');source.tieForward={endNote:target};}
+'''
+    result = run_function('addTie', setup,
+        'addTie({staff:0,voice:2,startTick:0,pitch:60})')
+    assert result == {'success': True, 'changed': True, 'staff': 0, 'voice': 2,
+                      'startTick': 0, 'endTick': 480, 'pitch': 60}
+
+
+def test_tie_rejects_nonmatching_next_chord():
+    setup = '''
+var Element={CHORD:1}, source={pitch:60,tieForward:null};
+var sourceChord={type:1,notes:[source]}, targetChord={type:1,notes:[{pitch:62}]};
+var curScore={nstaves:1,selection:{clear(){},select(){}}};
+function createCursor(){return {tick:0,element:sourceChord,next(){this.tick=480;this.element=targetChord;return true;}};}
+function executeWithUndo(f){try{return f();}catch(e){return {error:String(e)};}}
+'''
+    result = run_function('addTie', setup,
+        'addTie({staff:0,voice:0,startTick:0,pitch:60})')
+    assert 'matching pitch' in result['error']
+
+
+def test_sequence_accepts_chords_and_ties():
+    result = run_function('processSequence',
+        'var curScore={},selectionState={},calls=[];function processCommand(c){calls.push(c.action);return {success:true};}',
+        '({report:processSequence({sequence:[{action:"addChord"},{action:"addTie"},{action:"save"}]}),calls:calls})')
+    assert result['calls'] == ['addChord', 'addTie', 'save']
+    assert result['report']['completedIndices'] == [0, 1, 2]

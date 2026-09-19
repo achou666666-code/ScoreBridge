@@ -1,5 +1,28 @@
 # Live editor verification
 
+## Plugin 2.6 positioned chords, voices and ties, September 19, 2026
+
+On MuseScore 4.7.4, two `addChord` calls replaced the three quarter rests in the
+first staff's second 3/4 measure with two 3/8 chords. The saved MSCX contained
+two dotted-quarter chords with exact requested pairs: (72/C TPC14, 76/E TPC18,
+79/G TPC15) and (72/C TPC14, 77/F TPC13, 81/A TPC17). `addTie` on pitch 72 saved
+paired forward/back Tie spanners at relative offsets +3/8 and -3/8; the other
+notes were not tied.
+
+The first secondary-voice attempt exposed that setting an empty voice before
+tick positioning leaves no track element for `rewindToTick`. The implementation
+was changed to locate the staff tick first and then set the voice. After a full
+plugin reload, voice 1 (the second voice) saved pitch 60/TPC14 at tick 1920 and
+MuseScore created a distinct second `<voice>` block. Saved XML for staves 2-5 was
+byte-for-byte unchanged from the pre-test snapshot. Automated tests cover invalid
+pitches, duplicate chord tones, duration/TPC errors, concert-pitch display,
+nonmatching tie destinations and batch dispatch. The fixture was restored to its
+pre-test SHA-256 after verification.
+
+These checks cover positioned pitched chords and ties in ordinary notation. They
+do not yet cover grace notes, percussion noteheads, tablature, cross-staff voices
+or nested tuplets.
+
 ## Plugin 2.5 standard instrument playback, September 19, 2026
 
 On MuseScore 4.7.4, `getMidiChannels` read the live flute, B-flat clarinet,

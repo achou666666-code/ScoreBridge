@@ -23,6 +23,8 @@ def test_bundled_plugin_exposes_save_command():
     assert 'curScore.replaceInstrument(curScore.parts[partIndex], instrumentId)' in text
     assert 'case "setKeySignature":' in text
     assert 'case "addDynamic":' in text
+    assert 'case "addChord":' in text
+    assert 'case "addTie":' in text
     assert 'case "addArticulation":' in text
     assert 'case "addSlur":' in text
     assert 'staccato: "add-staccato"' in text
@@ -41,3 +43,5 @@ def test_bundled_plugin_exposes_save_command():
     assert '"addTechniqueText"' in sequence_block
     assert '"setPartInstrument"' in sequence_block
     assert '"setMidiPatch"' not in sequence_block
+    assert '"addChord"' in sequence_block
+    assert '"addTie"' in sequence_block

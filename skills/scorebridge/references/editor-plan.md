@@ -78,6 +78,41 @@ showed that its saved MIDI program changed while rendered audio stayed identical
 Arbitrary MuseSound, VST and SoundFont resource selection remains outside this
 command.
 
+## Precise note, chord and tie entry (bundled plugin 2.6)
+
+Use `addChord` for both single notes and chords. Position every event explicitly:
+
+```json
+{"action":"addChord","params":{
+  "staff":0,"voice":1,"startTick":1920,
+  "duration":{"numerator":3,"denominator":8},
+  "pitches":[72,76,79],"tpcs":[14,18,15]
+}}
+```
+
+Duration is a fraction of a whole note, so `1/4` is a quarter and `3/8` is a
+dotted quarter. Staff and voice are zero-based; voices range from 0 through 3.
+The command locates the tick before switching voices so an empty secondary voice
+can be expanded correctly. It rejects absent ticks, invalid pitches, duplicate
+pitches, zero durations and mismatched TPC arrays, then reads the saved chord
+back before reporting success.
+
+TPC preserves the printed spelling when written-pitch display is active. Natural
+bases are F=13, C=14, G=15, D=16, A=17, E=18, B=19; add 7 per sharp and subtract
+7 per flat. For example, F-sharp=20, B-flat=12 and E-flat=11. The accepted range
+is -1 through 35. Omit `tpcs` only when MuseScore's automatic spelling is suitable.
+
+Add one tie per pitch after both source and destination chords exist:
+
+```json
+{"action":"addTie","params":{"staff":0,"voice":1,"startTick":1920,"pitch":72}}
+```
+
+The immediate next event in that voice must be a chord containing the same MIDI
+pitch. An existing forward tie returns `changed:false`; a rest or nonmatching
+chord fails without inventing a destination note. For large passages, batch
+positioned chords first, then ties, markings and `save`.
+
 ## Written key signatures (bundled plugin 2.3)
 
 Use `setKeySignature` in a plan with explicit `staff`, `measure`, and `fifths`.
