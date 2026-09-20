@@ -153,6 +153,24 @@ at their score ticks. The command rejects invalid positions and ratios, then
 verifies MuseScore's actual/normal note counts and total duration. Cross-measure
 and nested tuplets remain outside the verified scope.
 
+## Grace notes (bundled plugin 2.8)
+
+Create the main chord first, then attach one semantic grace note to it:
+
+```json
+{"action":"addGraceNote","params":{"staff":0,"voice":0,"startTick":1920,"pitch":71,"tpc":19,"type":"acciaccatura"}}
+```
+
+The main chord is addressed by zero-based staff and voice plus absolute tick.
+`pitch` is the grace note's MIDI pitch and optional `tpc` is its printed spelling
+under written-pitch display. Supported types are `acciaccatura`, `appoggiatura`,
+`grace4`, `grace16`, `grace32`, `grace8after`, `grace16after`, and
+`grace32after`. If the main event is a chord, optional `anchorPitch` selects the
+main note used to invoke MuseScore's grace-note command; the grace chord still
+belongs to the whole main chord. The command reads back the created pitch, TPC,
+semantic `NoteType`, placement and total grace-note count. Preserve completed
+plan IDs when resuming so a grace note is not inserted twice.
+
 ## Written key signatures (bundled plugin 2.3)
 
 Use `setKeySignature` in a plan with explicit `staff`, `measure`, and `fifths`.

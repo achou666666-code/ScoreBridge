@@ -138,6 +138,11 @@ the resulting rest and supports empty secondary voices. `addTuplet` additionally
 accepts an explicit ratio such as 3:2, verifies the created ratio and reports its
 actual total duration. Live MuseScore 4.7.4 verification saved a quarter rest in
 voice 3 and a quarter-duration eighth-note triplet in voice 4.
+Bundled plugin 2.8 adds deterministic `addGraceNote`. It targets a main chord by
+staff, voice and absolute tick, creates one MuseScore semantic grace chord, then
+sets and reads back its MIDI pitch, optional written TPC, placement and note type.
+It supports all eight before/after grace-note types exposed by MuseScore. Live
+MuseScore 4.7.4 verification saved all eight XML tags and rendered the score.
 See `tests/LIVE_EDITOR_RESULTS.md` for the scope of live verification.
 
 ## Agent entry point

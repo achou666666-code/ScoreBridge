@@ -413,6 +413,90 @@ def test_sequence_accepts_chords_and_ties():
     assert result['report']['completedIndices'] == [0, 1, 2]
 
 
+def test_grace_note_selects_main_note_and_verifies_created_result():
+    setup = '''
+var Element={CHORD:1}, NoteType={ACCIACCATURA:10,APPOGGIATURA:11,GRACE4:12,GRACE16:13,
+  GRACE32:14,GRACE8_AFTER:15,GRACE16_AFTER:16,GRACE32_AFTER:17};
+var selectionState={}, selected=null, dispatched=[];
+var mainNote={pitch:64,tpc:18}, mainChord={type:1,notes:[mainNote],graceNotes:[],actualDuration:{ticks:480}};
+var curScore={nstaves:1,style:{value(){return false;}},selection:{clear(){},select(n,add){selected=n;}}};
+function createCursor(p){return {tick:0,element:mainChord};}
+function executeWithUndo(f){try{return f();}catch(e){return {error:String(e)};}}
+function processElement(){return {name:"Chord"};}
+function cmd(name){
+  dispatched.push(name);
+  var graceNote={pitch:64,tpc:18,noteType:10};
+  mainChord.graceNotes.push({notes:[graceNote]});
+}
+'''
+    result = run_function('addGraceNote', setup,
+        '({report:addGraceNote({staff:0,voice:0,startTick:0,pitch:66,tpc:20,type:"acciaccatura"}),'
+        'selected:selected,dispatched:dispatched,grace:mainChord.graceNotes[0].notes[0]})')
+    assert result['report']['success'] is True
+    assert result['report']['type'] == 'acciaccatura'
+    assert result['report']['placement'] == 'before'
+    assert result['report']['note'] == {'pitch': 66, 'tpc': 20, 'noteType': 10}
+    assert result['selected'] == {'pitch': 64, 'tpc': 18}
+    assert result['dispatched'] == ['acciaccatura']
+    assert result['grace']['pitch'] == 66
+
+
+@pytest.mark.parametrize('kind,action,note_type,placement', [
+    ('appoggiatura', 'appoggiatura', 11, 'before'),
+    ('grace4', 'grace4', 12, 'before'),
+    ('grace16', 'grace16', 13, 'before'),
+    ('grace32', 'grace32', 14, 'before'),
+    ('grace8after', 'grace8after', 15, 'after'),
+    ('grace16after', 'grace16after', 16, 'after'),
+    ('grace32after', 'grace32after', 17, 'after'),
+])
+def test_grace_note_dispatches_every_supported_musescore_type(kind, action, note_type, placement):
+    setup = '''
+var Element={CHORD:1}, NoteType={ACCIACCATURA:10,APPOGGIATURA:11,GRACE4:12,GRACE16:13,
+  GRACE32:14,GRACE8_AFTER:15,GRACE16_AFTER:16,GRACE32_AFTER:17};
+var selectionState={}, dispatched=[];
+var mainChord={type:1,notes:[{pitch:60,tpc:14}],graceNotes:[],actualDuration:{ticks:480}};
+var curScore={nstaves:1,style:{value(){return false;}},selection:{clear(){},select(){}}};
+function createCursor(){return {tick:0,element:mainChord};}
+function executeWithUndo(f){try{return f();}catch(e){return {error:String(e)};}}
+function processElement(){return {};}
+function cmd(name){dispatched.push(name);mainChord.graceNotes.push({notes:[{pitch:60,tpc:14,noteType:TYPE}]});}
+'''.replace('TYPE', str(note_type))
+    result = run_function('addGraceNote', setup,
+        '({report:addGraceNote({staff:0,startTick:0,pitch:61,type:' + json.dumps(kind) + '}),calls:dispatched})')
+    assert result['report']['success'] is True
+    assert result['report']['placement'] == placement
+    assert result['calls'] == [action]
+
+
+@pytest.mark.parametrize('params,error', [
+    (None, 'type'),
+    ({'staff': 0, 'startTick': 0, 'pitch': 60, 'type': 'mordent'}, 'unsupported'),
+    ({'staff': -1, 'startTick': 0, 'pitch': 60, 'type': 'acciaccatura'}, 'staff'),
+    ({'staff': 0, 'voice': 4, 'startTick': 0, 'pitch': 60, 'type': 'acciaccatura'}, 'voice'),
+    ({'staff': 0, 'startTick': -1, 'pitch': 60, 'type': 'acciaccatura'}, 'starttick'),
+    ({'staff': 0, 'startTick': 0, 'pitch': 128, 'type': 'acciaccatura'}, 'pitch'),
+    ({'staff': 0, 'startTick': 0, 'pitch': 60, 'tpc': 36, 'type': 'acciaccatura'}, 'tpc'),
+])
+def test_grace_note_rejects_invalid_requests_before_edit(params, error):
+    setup = '''
+var NoteType={ACCIACCATURA:10,APPOGGIATURA:11,GRACE4:12,GRACE16:13,GRACE32:14,
+  GRACE8_AFTER:15,GRACE16_AFTER:16,GRACE32_AFTER:17};
+var curScore={nstaves:1,style:{value(){return false;}}};
+function executeWithUndo(){throw Error("must not edit");}
+'''
+    result = run_function('addGraceNote', setup, 'addGraceNote(' + json.dumps(params) + ')')
+    assert error in result['error'].lower()
+
+
+def test_sequence_accepts_grace_note():
+    result = run_function('processSequence',
+        'var curScore={},selectionState={},calls=[];function processCommand(c){calls.push(c.action);return {success:true};}',
+        '({report:processSequence({sequence:[{action:"addGraceNote"},{action:"save"}]}),calls:calls})')
+    assert result['calls'] == ['addGraceNote', 'save']
+    assert result['report']['completedIndices'] == [0, 1]
+
+
 def test_rest_writes_explicit_voice_position_and_duration():
     setup = '''
 var Element={REST:2}, selectionState={startStaff:0,startTick:0}, added=false;

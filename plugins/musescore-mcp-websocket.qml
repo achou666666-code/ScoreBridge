@@ -5,7 +5,7 @@ MuseScore {
     id: root
     menuPath: "Plugins.MuseScore API Server"
     description: "Exposes MuseScore API via WebSocket (Clean Version)"
-    version: "2.7"
+    version: "2.8"
     
     property var clientConnections: []
     property var selectionState: ({
@@ -73,6 +73,7 @@ MuseScore {
             case "addTie":                  return addTie(command.params);
             case "addRest":                 return addRest(command.params);
             case "addTuplet":               return addTuplet(command.params);
+            case "addGraceNote":            return addGraceNote(command.params);
             case "addLyrics":               return addLyrics(command.params);
             case "addDynamic":              return addDynamic(command.params);
             case "addArticulation":         return addArticulation(command.params);
@@ -269,6 +270,19 @@ MuseScore {
                     pitchName: getTpcName(note.tpc)
                 });
             }
+            base.graceNotes = [];
+            for (var g = 0; g < element.graceNotes.length; g++) {
+                var graceChord = element.graceNotes[g];
+                var grace = { noteType: graceChord.noteType, notes: [] };
+                for (var gn = 0; gn < graceChord.notes.length; gn++) {
+                    grace.notes.push({
+                        pitchMidi: graceChord.notes[gn].pitch,
+                        tpc: graceChord.notes[gn].tpc,
+                        pitchName: getTpcName(graceChord.notes[gn].tpc)
+                    });
+                }
+                base.graceNotes.push(grace);
+            }
         }
                 
         return base;
@@ -320,7 +334,7 @@ MuseScore {
                 "goToFinalMeasure", "nextElement", "prevElement",
                 "nextStaff", "prevStaff", "selectCurrentMeasure",
                 "selectCustomRange", "processSequence", "addNote", "addChord", "addTie",
-                "addRest", "addTuplet", "addLyrics", "appendMeasure",
+                "addRest", "addTuplet", "addGraceNote", "addLyrics", "appendMeasure",
                 "insertMeasure", "deleteSelection", "addInstrument",
                 "getMidiChannels", "setPartInstrument",
                 "getPageLayout", "setPageLayout", "setLayoutBreak",
@@ -348,7 +362,7 @@ MuseScore {
 
         var validCommands = [
             "getCapabilities", "getScore",
-            "addNote", "addChord", "addTie", "addRest", "addTuplet", "appendMeasure", "deleteSelection",
+            "addNote", "addChord", "addTie", "addRest", "addTuplet", "addGraceNote", "appendMeasure", "deleteSelection",
             "getCursorInfo", "goToMeasure", "nextElement", "prevElement", "nextStaff", "prevStaff", "save",
             "selectCurrentMeasure", "processSequence", "insertMeasure", "goToFinalMeasure",
             "getMidiChannels", "setPartInstrument",
@@ -1046,6 +1060,111 @@ MuseScore {
                     ratio: {numerator: element.tuplet.actualNotes,
                             denominator: element.tuplet.normalNotes},
                     currentSelection: selectionState};
+        });
+    }
+
+    function addGraceNote(params) {
+        if (!curScore) return { error: "No score open" };
+        if (!params || typeof params.type !== "string")
+            return { error: "type must identify a supported grace note" };
+        var actions = {
+            acciaccatura: "acciaccatura",
+            appoggiatura: "appoggiatura",
+            grace4: "grace4",
+            grace16: "grace16",
+            grace32: "grace32",
+            grace8after: "grace8after",
+            grace16after: "grace16after",
+            grace32after: "grace32after"
+        };
+        if (!Object.prototype.hasOwnProperty.call(actions, params.type))
+            return { error: "Unsupported grace note type: " + params.type };
+        if (!Number.isInteger(params.staff) || params.staff < 0 || params.staff >= curScore.nstaves)
+            return { error: "staff must be a valid zero-based staff index" };
+        var voice = params.voice === undefined ? 0 : params.voice;
+        if (!Number.isInteger(voice) || voice < 0 || voice > 3)
+            return { error: "voice must be an integer from 0 to 3" };
+        if (!Number.isInteger(params.startTick) || params.startTick < 0)
+            return { error: "startTick must be a nonnegative integer" };
+        if (!Number.isInteger(params.pitch) || params.pitch < 0 || params.pitch > 127)
+            return { error: "pitch must be an integer from 0 to 127" };
+        if (params.anchorPitch !== undefined && (!Number.isInteger(params.anchorPitch) ||
+            params.anchorPitch < 0 || params.anchorPitch > 127))
+            return { error: "anchorPitch must be an integer from 0 to 127" };
+        if (params.tpc !== undefined) {
+            if (!Number.isInteger(params.tpc) || params.tpc < -1 || params.tpc > 35)
+                return { error: "tpc must be an integer from -1 to 35" };
+            if (curScore.style.value("concertPitch"))
+                return { error: "Written TPC input requires the score's concert pitch display to be off" };
+        }
+        var expectedTypes = {
+            acciaccatura: NoteType.ACCIACCATURA,
+            appoggiatura: NoteType.APPOGGIATURA,
+            grace4: NoteType.GRACE4,
+            grace16: NoteType.GRACE16,
+            grace32: NoteType.GRACE32,
+            grace8after: NoteType.GRACE8_AFTER,
+            grace16after: NoteType.GRACE16_AFTER,
+            grace32after: NoteType.GRACE32_AFTER
+        };
+        return executeWithUndo(function() {
+            var cursor = createCursor({startStaff: params.staff, voice: voice, startTick: params.startTick});
+            if (cursor.tick !== params.startTick || !cursor.element || cursor.element.type !== Element.CHORD)
+                throw new Error("No main chord exists at the requested position");
+            var mainChord = cursor.element;
+            var anchor = null;
+            for (var n = 0; n < mainChord.notes.length; n++) {
+                if (params.anchorPitch === undefined || mainChord.notes[n].pitch === params.anchorPitch) {
+                    anchor = mainChord.notes[n];
+                    break;
+                }
+            }
+            if (!anchor) throw new Error("The main chord does not contain anchorPitch " + params.anchorPitch);
+            var existing = [];
+            for (var g = 0; g < mainChord.graceNotes.length; g++) existing.push(mainChord.graceNotes[g]);
+            curScore.selection.clear();
+            curScore.selection.select(anchor, false);
+            cmd(actions[params.type]);
+
+            var verify = createCursor({startStaff: params.staff, voice: voice, startTick: params.startTick});
+            if (verify.tick !== params.startTick || !verify.element || verify.element.type !== Element.CHORD)
+                throw new Error("Main chord disappeared after adding the grace note");
+            var graceList = verify.element.graceNotes;
+            if (graceList.length !== existing.length + 1)
+                throw new Error("MuseScore did not create exactly one grace note");
+            var created = null;
+            for (var i = 0; i < graceList.length && !created; i++) {
+                var wasPresent = false;
+                for (var j = 0; j < existing.length; j++) {
+                    if ((graceList[i].is && graceList[i].is(existing[j])) || graceList[i] === existing[j]) {
+                        wasPresent = true;
+                        break;
+                    }
+                }
+                if (!wasPresent) created = graceList[i];
+            }
+            if (!created) {
+                created = params.type.indexOf("after") >= 0 ? graceList[graceList.length - 1] : graceList[0];
+            }
+            if (!created.notes || created.notes.length !== 1)
+                throw new Error("MuseScore created an unexpected grace chord");
+            var note = created.notes[0];
+            note.pitch = params.pitch;
+            if (params.tpc !== undefined) note.tpc = params.tpc;
+            if (note.pitch !== params.pitch)
+                throw new Error("MuseScore did not retain grace-note pitch " + params.pitch);
+            if (params.tpc !== undefined && note.tpc !== params.tpc)
+                throw new Error("MuseScore did not retain grace-note TPC " + params.tpc);
+            if (note.noteType !== expectedTypes[params.type])
+                throw new Error("MuseScore created a different grace-note type");
+            selectionState = {startStaff: params.staff, endStaff: params.staff + 1,
+                              startTick: params.startTick, elements: [processElement(verify.element)],
+                              totalDuration: verify.element.actualDuration ? verify.element.actualDuration.ticks : 0};
+            return {success: true, changed: true, staff: params.staff, voice: voice,
+                    startTick: params.startTick, type: params.type,
+                    placement: params.type.indexOf("after") >= 0 ? "after" : "before",
+                    note: {pitch: note.pitch, tpc: note.tpc, noteType: note.noteType},
+                    graceNoteCount: graceList.length, currentSelection: selectionState};
         });
     }
 

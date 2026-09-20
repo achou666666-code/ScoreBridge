@@ -1,5 +1,22 @@
 # Live editor verification
 
+## Plugin 2.8 semantic grace notes, September 20, 2026
+
+On MuseScore 4.7.4, `addGraceNote` targeted existing main chords by exact staff,
+voice and tick and created all eight supported semantic types: `acciaccatura`,
+`appoggiatura`, `grace4`, `grace16`, `grace32`, `grace8after`, `grace16after`,
+and `grace32after`. Each command read back the requested MIDI pitch, written TPC,
+MuseScore `NoteType`, before/after placement and grace-note count before success.
+
+After plugin save, direct MSCZ/MSCX inspection found each corresponding XML tag
+exactly once and the requested pitches/TPC2 values beside those tags. MuseScore
+also rendered the edited score to a 6,179,686-byte, 44.1 kHz stereo Float32 WAV.
+The test used only `/tmp` artifacts. During the test, `create-score --open` started
+a second MuseScore process while the WebSocket remained attached to the first;
+the live edits were therefore deliberately run on the first process's disposable
+score after checking `getScore`. Selecting the intended open MuseScore instance
+is an explicit requirement for the remaining end-to-end regression.
+
 ## CLI scaffold to live MCP lifecycle, September 20, 2026
 
 `scorebridge create-score` created a five-measure 12/8 MSCZ from a JSON
