@@ -12,3 +12,5 @@ def test_server_exposes_agent_default():
     tools = {t.name: t for t in asyncio.run(module.mcp.list_tools())}
     assert tools['score_transcribe'].inputSchema['properties']['mode']['default'] == 'agent'
     assert 'musescore_execute_plan' in tools
+    assert 'musescore_create_score' in tools
+    assert tools['musescore_create_score'].inputSchema['properties']['open_editor']['default'] is True

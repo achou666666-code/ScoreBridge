@@ -18,6 +18,11 @@ def main():
     open_score = sub.add_parser("open-score")
     open_score.add_argument("input")
     open_score.add_argument("--executable", default="")
+    create_score = sub.add_parser("create-score")
+    create_score.add_argument("spec")
+    create_score.add_argument("--output", required=True)
+    create_score.add_argument("--executable", default="")
+    create_score.add_argument("--open", action="store_true", dest="open_editor")
     execute=sub.add_parser("execute-plan"); execute.add_argument("input"); execute.add_argument("--url", default="")
     validate=sub.add_parser("validate"); validate.add_argument("input")
     compile_cmd=sub.add_parser("compile"); compile_cmd.add_argument("input"); compile_cmd.add_argument("--output", required=True)
@@ -48,6 +53,16 @@ def main():
             print(json.dumps({"status": "error", "error": str(exc)}, ensure_ascii=False, indent=2))
             raise SystemExit(1)
         print(json.dumps(report, ensure_ascii=False, indent=2)); return
+    if args.command == "create-score":
+        from .musescore import create_seed_score
+        try:
+            specification = json.loads(Path(args.spec).read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError) as exc:
+            print(json.dumps({"status": "error", "stage": "specification", "error": str(exc)}, ensure_ascii=False, indent=2))
+            raise SystemExit(1)
+        report = create_seed_score(specification, args.output, args.executable, args.open_editor)
+        print(json.dumps(report, ensure_ascii=False, indent=2))
+        raise SystemExit(0 if report["status"] in {"pass", "incomplete"} else 1)
     if args.command == "execute-plan":
         from .agent_workflow import execute_plan_file
         report = execute_plan_file(args.input, args.url)

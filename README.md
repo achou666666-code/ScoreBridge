@@ -74,18 +74,19 @@ a standard MuseScore instrument template. This updates notation defaults and the
 playback sound. Raw MIDI program changes are not advertised as sound assignment:
 MuseScore 4 can retain the same audio resource after a MIDI program edit.
 
-The current live bridge edits and saves an already-open score. New-score creation,
-opening a path, Save As, and arbitrary MuseSound/VST resource selection remain
-pending for MuseScore 4.7.4. Standard instrument replacement is available through
-`setPartInstrument`. The lifecycle command names are reserved and return a clear
-unsupported result until a version-tested implementation is available; ScoreBridge
-does not claim those operations succeeded.
+The live bridge edits and saves an already-open score. ScoreBridge creates the
+initial MSCZ through the tested CLI adapter instead of guessing unsupported QML
+creation and Save-As APIs. Call `musescore_create_score` with a title, measure
+count, meter and parts; it builds a private MusicXML scaffold, converts it to a
+validated MSCZ, and can open it for live MCP editing. Arbitrary MuseSound/VST
+resource selection remains pending. The QML lifecycle command names stay reserved
+and return a clear unsupported result rather than claiming success.
 
 `musescore_open` is the supported path-opening helper for an existing MSCZ or
 MusicXML file. It launches MuseScore with that file and returns the process id;
 the Agent should then wait for `musescore_websocket_status` to confirm the plugin
-before sending edits. Creating a blank score and Save As remain version-dependent.
-The same operation is available locally as `scorebridge open-score INPUT`.
+before sending edits. CLI equivalents are `scorebridge create-score SPEC --output
+SCORE.mscz --open` and `scorebridge open-score INPUT`.
 Before exporting or editing playback, call `score_instrument_audit` on the
 internal score plan. It reports unresolved IDs and detects an accidental piano
 fallback; a part label alone is not evidence of a correct playback sound.
@@ -153,14 +154,24 @@ or invoke a second model. Original, rendered and enhanced images and their page
 mapping remain in the working directory. Filename sorting is a convenience;
 the Agent checks actual page order and identifies non-score pages.
 
-The Agent can keep a compact command plan instead of the legacy Score IR:
+Create the initial MSCZ from the Agent's established score context:
+
+```bash
+scorebridge create-score examples/orchestra-seed.json --output score.mscz --open
+```
+
+The MCP form is `musescore_create_score(specification, output_path)`. Its returned
+instrument steps use verified MuseScore IDs and can be included in the subsequent
+edit plan. The intermediate MusicXML stays under `.scorebridge/`.
+
+The Agent can then keep a compact command plan instead of the legacy Score IR:
 
 ```bash
 scorebridge execute-plan PLAN.json
 ```
 
-`examples/create-and-save-plan.json` shows the recommended lifecycle order for a
-new score: create, set notation context, write content, then save as MSCZ. The
+`examples/edit-and-save-plan.json` shows the order after creating the scaffold:
+verify the instrument, write positioned content, then save the existing MSCZ. The
 same plan can be sent through `musescore_execute_plan`; each step has a stable ID
 so a partial failure can resume from the last acknowledged command.
 
@@ -225,6 +236,5 @@ editing and listening tests.
 
 ## Next editor work
 
-Complete and verify create/open/save, instrument playback assignments, multi-voice
-entry, slurs/articulations/techniques, and layout through an actual MuseScore
-plugin. Then run the local orchestral regression. Sibelius support is future work.
+Add grace-note and percussion-specific semantics, then run the full local
+PDF-to-MSCZ orchestral regression. Sibelius support is future work.

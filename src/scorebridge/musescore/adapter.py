@@ -4,6 +4,7 @@ from pathlib import Path
 import os
 import shutil
 import subprocess
+import sys
 import tempfile
 from typing import Optional
 from zipfile import BadZipFile, ZipFile
@@ -58,8 +59,16 @@ class MuseScoreAdapter(MuseScoreBackend):
         exe = self.resolve()
         if not exe:
             raise MuseScoreError(self.status()["hint"])
+        command = [str(exe), str(src.resolve())]
+        if sys.platform == "darwin":
+            app = next((Path(*exe.parts[:index + 1]) for index, part in enumerate(exe.parts)
+                        if part.endswith(".app")), None)
+            if app:
+                # Send a normal macOS open-document event. Launching the inner
+                # binary directly does not reliably open a path in an existing instance.
+                command = ["/usr/bin/open", "-a", str(app), str(src.resolve())]
         try:
-            process = subprocess.Popen([str(exe), str(src.resolve())],
+            process = subprocess.Popen(command,
                                        stdout=subprocess.DEVNULL,
                                        stderr=subprocess.DEVNULL,
                                        env=os.environ.copy())
@@ -67,7 +76,7 @@ class MuseScoreAdapter(MuseScoreBackend):
             raise MuseScoreError(f"MuseScore could not be launched: {exc}") from exc
         return {"status": "pass", "input_path": str(src.resolve()),
                 "executable": str(exe), "pid": process.pid,
-                "command": [str(exe), str(src.resolve())]}
+                "command": command}
 
     @staticmethod
     def _valid_output(path: Path) -> bool:

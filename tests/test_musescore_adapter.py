@@ -1,4 +1,5 @@
 import pytest
+from pathlib import Path
 from scorebridge.musescore import MuseScoreAdapter, MuseScoreError
 
 def test_convert_checks_input_before_launch(tmp_path):
@@ -30,6 +31,24 @@ def test_open_score_reports_process(monkeypatch, tmp_path):
     assert result["status"] == "pass"
     assert result["pid"] == 4242
     assert result["command"][-1] == str(source.resolve())
+
+
+def test_open_score_uses_macos_document_event_for_app_bundle(monkeypatch, tmp_path):
+    import scorebridge.musescore.adapter as adapter_module
+    source = tmp_path / "source.mscz"
+    source.write_bytes(b"score")
+    calls = []
+    class Process:
+        pid = 99
+    monkeypatch.setattr(adapter_module.sys, "platform", "darwin")
+    monkeypatch.setattr(adapter_module.subprocess, "Popen",
+                        lambda command, **kwargs: calls.append(command) or Process())
+    adapter = MuseScoreAdapter()
+    monkeypatch.setattr(adapter, "resolve",
+                        lambda: Path("/Applications/MuseScore 4.app/Contents/MacOS/mscore"))
+    result = adapter.open_score(str(source))
+    assert calls == [["/usr/bin/open", "-a", "/Applications/MuseScore 4.app", str(source.resolve())]]
+    assert result["command"] == calls[0]
 
 
 def test_failed_conversion_cannot_reuse_old_output(tmp_path, monkeypatch):

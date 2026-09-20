@@ -5,7 +5,7 @@ from typing import Optional
 from scorebridge.score_ir import load_score
 from scorebridge.musicxml import compile_musicxml
 from scorebridge.validation import validate_score
-from scorebridge.musescore import MuseScoreAdapter, MuseScoreError, MuseScoreWebSocketBackend, MuseScoreWebSocketError
+from scorebridge.musescore import MuseScoreAdapter, MuseScoreError, MuseScoreWebSocketBackend, MuseScoreWebSocketError, create_seed_score
 from scorebridge.patches import apply_patch
 from scorebridge.score_ir import save_score
 from scorebridge.input import classify_page, inspect_input, prepare_image, prepare_input
@@ -83,6 +83,11 @@ def musescore_open(input_path: str, executable: str = "") -> dict:
         return MuseScoreAdapter(executable=executable or None).open_score(input_path)
     except (MuseScoreError, OSError) as exc:
         return {"status": "error", "error": str(exc)}
+
+@mcp.tool()
+def musescore_create_score(specification: dict, output_path: str, executable: str = "", open_editor: bool = True) -> dict:
+    """Create a playable MSCZ scaffold from parts, meter and measure count, then optionally open it."""
+    return create_seed_score(specification, output_path, executable, open_editor)
 
 @mcp.tool()
 def musescore_convert(input_path: str, output_path: str, executable: str = "") -> dict:

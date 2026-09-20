@@ -1,0 +1,13 @@
+{
+  "title": "Agent Orchestra",
+  "measures": 5,
+  "time": {"beats": 12, "beat_type": 8},
+  "key_fifths": -2,
+  "tempo_bpm": 124,
+  "parts": [
+    {"name": "Flute", "instrument_id": "flute"},
+    {"name": "Clarinet in B-flat", "instrument_id": "clarinet in bb"},
+    {"name": "Horn in F", "instrument_id": "horn in f"},
+    {"name": "Piano", "instrument_id": "piano", "clefs": ["treble", "bass"]}
+  ]
+}

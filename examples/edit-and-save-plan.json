@@ -1,0 +1,7 @@
+{
+  "steps": [
+    {"id": "piano-sound", "action": "setPartInstrument", "params": {"part": 0, "instrumentId": "piano"}},
+    {"id": "opening-chord", "action": "addChord", "params": {"staff": 0, "voice": 0, "startTick": 0, "duration": {"numerator": 1, "denominator": 4}, "pitches": [60, 64, 67], "tpcs": [14, 18, 15]}},
+    {"id": "save-score", "action": "save", "params": {}}
+  ]
+}

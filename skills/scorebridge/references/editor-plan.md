@@ -25,10 +25,25 @@ response separates available `commands` from `reserved_commands`; editor-status
 exposes that response. Upstream mcp-score uses a different `command` protocol;
 the bundled plugin uses `action`. Prefer the connected instance's capabilities
 over an upstream command list. Opening an existing file is handled by
-`musescore_open`; new-score creation, Save As, and arbitrary audio-resource
-selection are still reserved in the QML plugin. Standard MuseScore instrument
-replacement, including its playback sound, is available through
-`setPartInstrument`.
+`musescore_open`. Initial-score creation is handled by `musescore_create_score`,
+which builds and converts a private MusicXML scaffold before the WebSocket edit
+session. Create/Open/Save-As remain reserved in the QML plugin itself. Standard
+MuseScore instrument replacement, including its playback sound, is available
+through `setPartInstrument`.
+
+Create the scaffold before executing editor steps:
+
+```json
+{"title":"Agent Orchestra","measures":5,"time":{"beats":12,"beat_type":8},
+ "key_fifths":-2,"tempo_bpm":124,
+ "parts":[{"name":"Flute","instrument_id":"flute"},
+          {"name":"Piano","instrument_id":"piano","clefs":["treble","bass"]}]}
+```
+
+The tool rejects unresolved instruments instead of allowing a silent piano
+fallback. Its returned `instrument_steps` use MuseScore catalog IDs for an
+idempotent live check. The MSCZ is the edit target and final deliverable; the
+seed MusicXML is internal scaffolding.
 
 The range → dynamic → technique text → save batch was verified on MuseScore
 4.7.4 by inspecting the saved MSCZ: `mp` with velocity 64 and the exact staff text

@@ -1,5 +1,29 @@
 # Live editor verification
 
+## CLI scaffold to live MCP lifecycle, September 20, 2026
+
+`scorebridge create-score` created a five-measure 12/8 MSCZ from a JSON
+specification with flute, B-flat clarinet, F horn and two-staff piano. MuseScore
+4.7.4 opened the resulting 34 KB file. `getScore` reported five measures and five
+staves with 2880-tick measure rests. `getMidiChannels` read the real MuseScore
+instrument IDs `flute`, `bb-clarinet`, `horn`, and `piano`; replaying the returned
+`setPartInstrument` steps was idempotent (`changed:false`) for all four parts.
+
+The same live plan wrote a dotted-quarter flute note, clarinet note, horn note and
+piano triad at tick 0, then saved through the plugin. Saved MSCX inspection
+confirmed the four instrument IDs, 12/8 signatures, requested pitches/TPC values,
+written/concert key handling for the transposing parts, and tempo quarter=124.
+MuseScore rendered the MSCZ to a valid 44.1 kHz stereo WAV of 6,179,686 bytes.
+This verifies the complete scaffold → open → MCP edit → save → playable-render
+lifecycle on this standard orchestral subset. The smoke artifacts remained under
+`/tmp` and are not repository fixtures.
+
+The macOS path opener was also changed to send a normal application document-open
+event through `/usr/bin/open -a`. Repeating `scorebridge open-score` then opened
+the requested MSCZ directly in MuseScore, including when another instance had
+recently been active; launching the bundle's inner binary had previously returned
+a process ID without reliably opening the document.
+
 ## Plugin 2.7 positioned rests and tuplets, September 19, 2026
 
 On MuseScore 4.7.4, `addRest` wrote a quarter rest at tick 0 on staff 0,

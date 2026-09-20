@@ -38,11 +38,11 @@ def test_plan_prevalidates_all_steps_before_writing():
     assert bridge.calls == []
 
 
-def test_create_and_save_example_plan_is_ordered():
+def test_edit_and_save_example_plan_is_ordered():
     import json
     from pathlib import Path
-    plan = json.loads((Path(__file__).parents[1] / "examples/create-and-save-plan.json").read_text())
+    plan = json.loads((Path(__file__).parents[1] / "examples/edit-and-save-plan.json").read_text())
     bridge = Bridge()
     result = execute_plan(plan, bridge)
     assert result["status"] == "executed"
-    assert bridge.calls == ["createScore", "setTimeSignature", "setTempo", "addNote", "saveAs"]
+    assert bridge.calls == ["setPartInstrument", "addChord", "save"]
