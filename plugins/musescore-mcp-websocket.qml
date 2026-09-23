@@ -5,7 +5,7 @@ MuseScore {
     id: root
     menuPath: "Plugins.MuseScore API Server"
     description: "Exposes MuseScore API via WebSocket (Clean Version)"
-    version: "2.8"
+    version: "2.9"
     
     property var clientConnections: []
     property var selectionState: ({
@@ -43,6 +43,7 @@ MuseScore {
         switch(command.action) {
             // Core operations
             case "getScore":                return getScore(command.params);
+            case "getScoreIdentity":        return getScoreIdentity();
             case "getCapabilities":         return getCapabilities();
             case "createScore":             return createScore(command.params);
             case "openScore":               return openScore(command.params);
@@ -329,7 +330,7 @@ MuseScore {
         return {
             pluginVersion: version,
             commands: [
-                "ping", "getCapabilities", "getScore", "save", "undo",
+                "ping", "getCapabilities", "getScore", "getScoreIdentity", "save", "undo",
                 "goToBeginningOfScore", "getCursorInfo", "goToMeasure",
                 "goToFinalMeasure", "nextElement", "prevElement",
                 "nextStaff", "prevStaff", "selectCurrentMeasure",
@@ -343,6 +344,17 @@ MuseScore {
             ],
             reserved_commands: ["createScore", "openScore", "saveAs",
                                 "setStaffMute", "setMidiPatch", "setInstrumentSound"]
+        };
+    }
+
+    function getScoreIdentity() {
+        if (!curScore) return { error: "No score open" };
+        return {
+            targetId: curScore.metaTag("scorebridgeTargetId") || "",
+            scoreName: curScore.scoreName || "",
+            title: curScore.metaTag("workTitle") || curScore.title || "",
+            numMeasures: curScore.nmeasures,
+            numStaves: curScore.nstaves
         };
     }
 

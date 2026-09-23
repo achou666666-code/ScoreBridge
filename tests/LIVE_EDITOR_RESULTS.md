@@ -1,5 +1,21 @@
 # Live editor verification
 
+## Plugin 2.9 exact score binding, September 23, 2026
+
+Two disposable MSCZ files were created with different private target IDs, names,
+titles, measure counts and staff counts. With score A owning the WebSocket, an
+edit plan carrying score B's target returned `wrong_target`, `completed: []` and
+all five field differences. The plan's `addChord` and `save` commands were never
+sent; score A's SHA-256 was identical before and after the refusal.
+
+After starting the plugin on score B, `scorebridge bind-score` returned `bound`
+only when `getScoreIdentity` read back B's exact target ID, name, title, five
+measures and three staves. The test also exposed that macOS may launch a second
+MuseScore process for a document-open request rather than transfer the existing
+WebSocket. The binder therefore refuses a different live target instead of
+claiming a switch or risking writes to the wrong score. Tests used only `/tmp`
+artifacts.
+
 ## Plugin 2.8 semantic grace notes, September 20, 2026
 
 On MuseScore 4.7.4, `addGraceNote` targeted existing main chords by exact staff,

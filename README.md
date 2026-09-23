@@ -50,7 +50,8 @@ install it with:
 bash scripts/install_musescore_plugin.sh
 ```
 
-Then open a score in MuseScore and choose `Plugins > musescore-mcp-websocket`.
+Then open a score in MuseScore and choose `Plugins > MuseScore API Server`
+(older reloads may display the filename `musescore-mcp-websocket`).
 Leave the plugin running while ScoreBridge sends editing commands. Verify the
 live connection with `.venv/bin/scorebridge editor-status`.
 
@@ -87,6 +88,23 @@ MusicXML file. It launches MuseScore with that file and returns the process id;
 the Agent should then wait for `musescore_websocket_status` to confirm the plugin
 before sending edits. CLI equivalents are `scorebridge create-score SPEC --output
 SCORE.mscz --open` and `scorebridge open-score INPUT`.
+
+Every newly created scaffold has a private `scorebridgeTargetId`. The create
+result returns a `target` object containing that ID, score name, title, measure
+count and staff count. Copy this exact object into the subsequent command plan.
+`musescore_execute_plan` reads the live score identity before its first mutation
+and returns `wrong_target` without sending edits if any field differs. To attach
+an existing editor safely, call `musescore_bind_score(input_path, target)` or:
+
+```bash
+scorebridge bind-score score.mscz --target create-result.json
+```
+
+On macOS the binder reuses a listener only when it already owns the requested
+score; otherwise it returns `wrong_target` without opening or editing anything.
+When no listener exists it launches a dedicated process. It reports `bound` only
+after the plugin reads back the exact target. A process ID, window title or
+successful file-open request alone is not accepted as binding.
 Before exporting or editing playback, call `score_instrument_audit` on the
 internal score plan. It reports unresolved IDs and detects an accidental piano
 fallback; a part label alone is not evidence of a correct playback sound.
@@ -144,6 +162,9 @@ sets and reads back its MIDI pitch, optional written TPC, placement and note typ
 It supports all eight before/after grace-note types exposed by MuseScore. Live
 MuseScore 4.7.4 verification saved all eight XML tags and rendered the score.
 See `tests/LIVE_EDITOR_RESULTS.md` for the scope of live verification.
+Bundled plugin 2.9 adds read-only `getScoreIdentity`. It exposes the scaffold's
+private target ID plus its current name, title, measure count and staff count for
+pre-mutation binding checks. It does not infer identity from a visible filename.
 
 ## Agent entry point
 
@@ -167,7 +188,8 @@ scorebridge create-score examples/orchestra-seed.json --output score.mscz --open
 
 The MCP form is `musescore_create_score(specification, output_path)`. Its returned
 instrument steps use verified MuseScore IDs and can be included in the subsequent
-edit plan. The intermediate MusicXML stays under `.scorebridge/`.
+edit plan. Preserve its returned `target` unchanged in that plan. The intermediate
+MusicXML stays under `.scorebridge/`.
 
 The Agent can then keep a compact command plan instead of the legacy Score IR:
 
@@ -178,7 +200,9 @@ scorebridge execute-plan PLAN.json
 `examples/edit-and-save-plan.json` shows the order after creating the scaffold:
 verify the instrument, write positioned content, then save the existing MSCZ. The
 same plan can be sent through `musescore_execute_plan`; each step has a stable ID
-so a partial failure can resume from the last acknowledged command.
+so a partial failure can resume from the last acknowledged command. The plan is
+rejected before the first write unless its `target` exactly matches the connected
+score.
 
 The MCP equivalent is `musescore_execute_plan(input_path)`. It prevalidates step
 IDs, executes in order, and reports completed IDs and the failed step. It is not

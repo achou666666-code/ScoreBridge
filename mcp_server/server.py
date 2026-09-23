@@ -5,7 +5,8 @@ from typing import Optional
 from scorebridge.score_ir import load_score
 from scorebridge.musicxml import compile_musicxml
 from scorebridge.validation import validate_score
-from scorebridge.musescore import MuseScoreAdapter, MuseScoreError, MuseScoreWebSocketBackend, MuseScoreWebSocketError, create_seed_score
+from scorebridge.musescore import (MuseScoreAdapter, MuseScoreError, MuseScoreWebSocketBackend,
+                                  MuseScoreWebSocketError, bind_editor_score, create_seed_score)
 from scorebridge.patches import apply_patch
 from scorebridge.score_ir import save_score
 from scorebridge.input import classify_page, inspect_input, prepare_image, prepare_input
@@ -81,6 +82,16 @@ def musescore_open(input_path: str, executable: str = "") -> dict:
     """Open an existing MSCZ or MusicXML file in MuseScore."""
     try:
         return MuseScoreAdapter(executable=executable or None).open_score(input_path)
+    except (MuseScoreError, OSError) as exc:
+        return {"status": "error", "error": str(exc)}
+
+@mcp.tool()
+def musescore_bind_score(input_path: str, target: dict, executable: str = "", url: str = "") -> dict:
+    """Open an MSCZ in the MCP-owning MuseScore process and verify its exact identity."""
+    try:
+        return bind_editor_score(input_path, target,
+                                 adapter=MuseScoreAdapter(executable=executable or None),
+                                 bridge=MuseScoreWebSocketBackend(url=url or None))
     except (MuseScoreError, OSError) as exc:
         return {"status": "error", "error": str(exc)}
 

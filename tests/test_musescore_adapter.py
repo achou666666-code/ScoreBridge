@@ -3,7 +3,7 @@ from pathlib import Path
 from scorebridge.musescore import MuseScoreAdapter, MuseScoreError
 
 def test_convert_checks_input_before_launch(tmp_path):
-    adapter = MuseScoreAdapter(executable="/bin/true")
+    adapter = MuseScoreAdapter(executable="/usr/bin/true")
     with pytest.raises(MuseScoreError, match="Input does not exist"):
         adapter.convert(str(tmp_path / "missing.musicxml"), str(tmp_path / "out.mscz"))
 
@@ -13,7 +13,7 @@ def test_invalid_explicit_executable_does_not_fall_back(tmp_path):
 
 
 def test_open_score_checks_input_before_launch(tmp_path):
-    adapter = MuseScoreAdapter(executable="/bin/true")
+    adapter = MuseScoreAdapter(executable="/usr/bin/true")
     with pytest.raises(MuseScoreError, match="Input does not exist"):
         adapter.open_score(str(tmp_path / "missing.mscz"))
 
@@ -49,6 +49,41 @@ def test_open_score_uses_macos_document_event_for_app_bundle(monkeypatch, tmp_pa
     result = adapter.open_score(str(source))
     assert calls == [["/usr/bin/open", "-a", "/Applications/MuseScore 4.app", str(source.resolve())]]
     assert result["command"] == calls[0]
+
+
+def test_launch_score_process_returns_real_musescore_pid(monkeypatch, tmp_path):
+    import scorebridge.musescore.adapter as adapter_module
+    source = tmp_path / "source.mscz"
+    source.write_bytes(b"score")
+    calls = []
+    class Process:
+        pid = 777
+    monkeypatch.setattr(adapter_module.subprocess, "Popen",
+                        lambda command, **kwargs: calls.append(command) or Process())
+    adapter = MuseScoreAdapter(executable="/usr/bin/true")
+    result = adapter.launch_score_process(str(source))
+    assert calls == [["/usr/bin/true", str(source.resolve())]]
+    assert result["pid"] == 777
+    assert result["launch_mode"] == "dedicated_process"
+
+
+def test_macos_dedicated_launch_uses_open_new_and_discovers_pid(monkeypatch, tmp_path):
+    import subprocess
+    import scorebridge.musescore.adapter as adapter_module
+    source = tmp_path / "source.mscz"
+    source.write_bytes(b"score")
+    calls = []
+    monkeypatch.setattr(adapter_module.sys, "platform", "darwin")
+    monkeypatch.setattr(adapter_module.subprocess, "run",
+                        lambda command, **kwargs: calls.append(command) or subprocess.CompletedProcess(command, 0))
+    adapter = MuseScoreAdapter()
+    executable = Path("/Applications/MuseScore 4.app/Contents/MacOS/mscore")
+    monkeypatch.setattr(adapter, "resolve", lambda: executable)
+    states = iter(({11}, {11, 22}))
+    monkeypatch.setattr(adapter, "_running_musescore_pids", lambda exe: next(states))
+    result = adapter.launch_score_process(str(source))
+    assert calls == [["/usr/bin/open", "-n", "-a", "/Applications/MuseScore 4.app", str(source.resolve())]]
+    assert result["pid"] == 22
 
 
 def test_failed_conversion_cannot_reuse_old_output(tmp_path, monkeypatch):

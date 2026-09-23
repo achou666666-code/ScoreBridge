@@ -13,4 +13,5 @@ def test_server_exposes_agent_default():
     assert tools['score_transcribe'].inputSchema['properties']['mode']['default'] == 'agent'
     assert 'musescore_execute_plan' in tools
     assert 'musescore_create_score' in tools
+    assert 'musescore_bind_score' in tools
     assert tools['musescore_create_score'].inputSchema['properties']['open_editor']['default'] is True

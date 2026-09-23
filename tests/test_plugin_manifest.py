@@ -7,6 +7,8 @@ def test_bundled_plugin_exposes_save_command():
     assert 'case "save":' in text
     assert 'cmd("file-save")' in text
     assert 'case "getCapabilities":' in text
+    assert 'case "getScoreIdentity":' in text
+    assert 'curScore.metaTag("scorebridgeTargetId")' in text
     assert '"getCapabilities", "getScore"' in text
     assert 'case "createScore":' in text
     assert 'case "openScore":' in text

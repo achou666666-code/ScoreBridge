@@ -21,8 +21,9 @@ def orchestral_spec():
 
 
 def test_seed_musicxml_contains_parts_meter_transposition_and_measure_rests(tmp_path):
-    output = build_seed_musicxml(orchestral_spec(), str(tmp_path / "seed.musicxml"))
+    output = build_seed_musicxml(orchestral_spec(), str(tmp_path / "seed.musicxml"), target_id="sb-test")
     root = ET.parse(output).getroot()
+    assert root.findtext("./identification/miscellaneous/miscellaneous-field") == "sb-test"
     score_parts = root.findall("./part-list/score-part")
     assert [part.findtext("part-name") for part in score_parts] == [
         "Flute", "Clarinet in B-flat", "Piano"
@@ -68,11 +69,22 @@ class FakeAdapter:
 def test_create_seed_score_converts_opens_and_returns_instrument_plan(tmp_path):
     adapter = FakeAdapter()
     output = tmp_path / "agent.mscz"
-    result = create_seed_score(orchestral_spec(), str(output), open_editor=True, adapter=adapter)
+    bound = []
+    def binder(input_path, target, adapter):
+        bound.append((input_path, target, adapter))
+        return {"status": "bound", "actual": target}
+    result = create_seed_score(orchestral_spec(), str(output), open_editor=True,
+                               adapter=adapter, binder=binder)
     assert result["status"] == "pass"
     assert result["mscz_path"] == str(output.resolve())
     assert output.is_file()
-    assert adapter.opened == str(output)
+    assert adapter.opened is None
+    assert bound[0][0] == str(output)
+    assert bound[0][2] is adapter
+    assert result["target"]["targetId"].startswith("scorebridge-")
+    assert result["target"]["scoreName"] == "agent"
+    assert result["target"]["numMeasures"] == 5
+    assert result["target"]["numStaves"] == 4
     assert [part["instrument_id"] for part in result["parts"]] == ["flute", "bb-clarinet", "piano"]
     assert [step["action"] for step in result["instrument_steps"]] == [
         "setPartInstrument", "setPartInstrument", "setPartInstrument"

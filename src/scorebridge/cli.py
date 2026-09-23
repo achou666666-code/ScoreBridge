@@ -18,6 +18,11 @@ def main():
     open_score = sub.add_parser("open-score")
     open_score.add_argument("input")
     open_score.add_argument("--executable", default="")
+    bind_score = sub.add_parser("bind-score")
+    bind_score.add_argument("input")
+    bind_score.add_argument("--target", required=True)
+    bind_score.add_argument("--executable", default="")
+    bind_score.add_argument("--url", default="")
     create_score = sub.add_parser("create-score")
     create_score.add_argument("spec")
     create_score.add_argument("--output", required=True)
@@ -53,6 +58,21 @@ def main():
             print(json.dumps({"status": "error", "error": str(exc)}, ensure_ascii=False, indent=2))
             raise SystemExit(1)
         print(json.dumps(report, ensure_ascii=False, indent=2)); return
+    if args.command == "bind-score":
+        from .musescore import (MuseScoreAdapter, MuseScoreWebSocketBackend,
+                                bind_editor_score)
+        try:
+            target_payload = json.loads(Path(args.target).read_text(encoding="utf-8"))
+            target = target_payload.get("target", target_payload)
+            report = bind_editor_score(
+                args.input, target,
+                adapter=MuseScoreAdapter(executable=args.executable or None),
+                bridge=MuseScoreWebSocketBackend(url=args.url or None),
+            )
+        except (OSError, json.JSONDecodeError, ValueError) as exc:
+            report = {"status": "error", "error": str(exc)}
+        print(json.dumps(report, ensure_ascii=False, indent=2))
+        raise SystemExit(0 if report.get("status") == "bound" else 1)
     if args.command == "create-score":
         from .musescore import create_seed_score
         try:

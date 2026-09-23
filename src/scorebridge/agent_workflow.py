@@ -7,6 +7,7 @@ import json
 
 from .input import prepare_input
 from .musescore import MuseScoreWebSocketBackend, MuseScoreWebSocketError
+from .musescore.connect import identity_mismatches
 
 
 def prepare_agent_job(input_path, output_dir, dpi=450):
@@ -25,6 +26,12 @@ def execute_plan(plan, backend=None):
     This is not an atomic transaction. On timeout the failed command may have
     applied: read editor state before deciding how to continue.
     """
+    target = plan.get("target") if isinstance(plan, dict) else None
+    if not isinstance(target, dict):
+        return {"status": "error", "error": "plan.target must be the exact target returned by musescore_create_score"}
+    target_error = identity_mismatches(target, {})
+    if "target" in target_error:
+        return {"status": "error", "error": target_error["target"]}
     steps = plan.get("steps") if isinstance(plan, dict) else None
     if not isinstance(steps, list) or not steps:
         return {"status": "error", "error": "plan.steps must be a nonempty list"}
@@ -38,6 +45,17 @@ def execute_plan(plan, backend=None):
                     "error": "Each step needs a unique string id, action, and object params"}
         ids.add(step["id"])
     bridge = backend or MuseScoreWebSocketBackend()
+    try:
+        identity_response = bridge.command("getScoreIdentity", {})
+    except MuseScoreWebSocketError as exc:
+        return {"status": "incomplete", "completed": [], "failed_step": "target-check",
+                "error": str(exc), "next": "Bind the intended MSCZ before sending edits."}
+    actual = identity_response.get("result", identity_response) if isinstance(identity_response, dict) else {}
+    mismatches = identity_mismatches(target, actual if isinstance(actual, dict) else {})
+    if mismatches:
+        return {"status": "wrong_target", "completed": [], "target": target,
+                "actual": actual, "mismatches": mismatches,
+                "error": "Connected MuseScore score does not match plan.target; no edit was sent"}
     completed = []
     for step in steps:
         try:

@@ -1,6 +1,7 @@
 """Create a playable MSCZ scaffold before live MCP notation entry."""
 from pathlib import Path
-from typing import Optional
+from typing import Callable, Optional
+from uuid import uuid4
 from xml.etree.ElementTree import Element, ElementTree, SubElement
 
 from scorebridge.instruments import instrument_spec
@@ -106,12 +107,17 @@ def _normalise_spec(spec: dict) -> dict:
             "key_fifths": key_fifths, "tempo_bpm": tempo, "parts": normalised_parts}
 
 
-def build_seed_musicxml(spec: dict, output_path: str) -> Path:
+def build_seed_musicxml(spec: dict, output_path: str, target_id: str = "") -> Path:
     """Write a rest-filled MusicXML scaffold used only as MuseScore input."""
     data = _normalise_spec(spec)
     root = Element("score-partwise", version="4.0")
     work = SubElement(root, "work")
     SubElement(work, "work-title").text = data["title"]
+    if target_id:
+        identification = SubElement(root, "identification")
+        miscellaneous = SubElement(identification, "miscellaneous")
+        SubElement(miscellaneous, "miscellaneous-field",
+                   name="scorebridgeTargetId").text = target_id
     part_list = SubElement(root, "part-list")
     for index, part in enumerate(data["parts"]):
         score_part = SubElement(part_list, "score-part", id=part["id"])
@@ -171,7 +177,8 @@ def build_seed_musicxml(spec: dict, output_path: str) -> Path:
 
 
 def create_seed_score(spec: dict, output_path: str, executable: str = "", open_editor: bool = False,
-                      adapter: Optional[MuseScoreAdapter] = None) -> dict:
+                      adapter: Optional[MuseScoreAdapter] = None,
+                      binder: Optional[Callable] = None) -> dict:
     """Create an MSCZ scaffold, optionally open it, and return follow-up instrument steps."""
     destination = Path(output_path)
     if destination.suffix.lower() != ".mscz":
@@ -180,8 +187,9 @@ def create_seed_score(spec: dict, output_path: str, executable: str = "", open_e
         data = _normalise_spec(spec)
     except ValueError as exc:
         return {"status": "error", "stage": "specification", "error": str(exc)}
+    target_id = "scorebridge-" + uuid4().hex
     internal = destination.parent / ".scorebridge" / (destination.stem + ".seed.musicxml")
-    build_seed_musicxml(spec, str(internal))
+    build_seed_musicxml(spec, str(internal), target_id=target_id)
     backend = adapter or MuseScoreAdapter(executable=executable or None)
     try:
         converted = backend.convert(str(internal), str(destination))
@@ -201,12 +209,26 @@ def create_seed_score(spec: dict, output_path: str, executable: str = "", open_e
             for index, part in enumerate(data["parts"])
         ],
         "internal_musicxml": str(internal.resolve()),
+        "target": {
+            "targetId": target_id,
+            "scoreName": destination.stem,
+            "title": data["title"],
+            "numMeasures": data["measures"],
+            "numStaves": sum(len(part["clefs"]) for part in data["parts"]),
+        },
     }
     if open_editor:
         try:
-            result["editor"] = backend.open_score(str(destination))
+            if binder is None:
+                from .connect import bind_editor_score
+                binder = bind_editor_score
+            result["editor"] = binder(str(destination), result["target"], adapter=backend)
+            if result["editor"].get("status") != "bound":
+                result["status"] = "incomplete"
+                result["stage"] = "bind_editor"
+                result["error"] = result["editor"].get("error", "MuseScore target binding failed")
         except (MuseScoreError, OSError) as exc:
             result["status"] = "incomplete"
-            result["stage"] = "open_editor"
+            result["stage"] = "bind_editor"
             result["error"] = str(exc)
     return result

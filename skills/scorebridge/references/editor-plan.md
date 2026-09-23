@@ -171,6 +171,26 @@ belongs to the whole main chord. The command reads back the created pitch, TPC,
 semantic `NoteType`, placement and total grace-note count. Preserve completed
 plan IDs when resuming so a grace note is not inserted twice.
 
+## Exact score binding (bundled plugin 2.9)
+
+Score creation returns an opaque target object. Preserve it verbatim:
+
+```json
+{"target":{"targetId":"scorebridge-...","scoreName":"score","title":"Agent Score","numMeasures":5,"numStaves":22}}
+```
+
+Before editing, use `musescore_bind_score` (CLI `scorebridge bind-score`) with
+the MSCZ path and that target. A listener is reused only when it already owns the
+requested score. A different live score returns `wrong_target` without opening
+or editing anything; stop that listener and bind again. When no listener exists,
+ScoreBridge starts a dedicated MuseScore process. Binding succeeds only when the
+plugin's read-only `getScoreIdentity` result exactly matches all five fields.
+
+Every `musescore_execute_plan` payload must contain the same top-level `target`.
+The executor checks identity before sending the first mutation. A mismatch
+returns `wrong_target`, an empty `completed` list and field-by-field differences.
+Do not weaken this check to filenames, active-window guesses or process IDs.
+
 ## Written key signatures (bundled plugin 2.3)
 
 Use `setKeySignature` in a plan with explicit `staff`, `measure`, and `fifths`.

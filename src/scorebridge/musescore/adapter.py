@@ -6,6 +6,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import time
 from typing import Optional
 from zipfile import BadZipFile, ZipFile
 
@@ -77,6 +78,62 @@ class MuseScoreAdapter(MuseScoreBackend):
         return {"status": "pass", "input_path": str(src.resolve()),
                 "executable": str(exe), "pid": process.pid,
                 "command": command}
+
+    def launch_score_process(self, input_path: str) -> dict:
+        """Start a dedicated MuseScore process for a score and return its real PID."""
+        src = Path(input_path)
+        if not src.is_file():
+            raise MuseScoreError(f"Input does not exist: {src}")
+        exe = self.resolve()
+        if not exe:
+            raise MuseScoreError(self.status()["hint"])
+        command = [str(exe), str(src.resolve())]
+        if sys.platform == "darwin":
+            app = next((Path(*exe.parts[:index + 1]) for index, part in enumerate(exe.parts)
+                        if part.endswith(".app")), None)
+            if app:
+                before = self._running_musescore_pids(exe)
+                command = ["/usr/bin/open", "-n", "-a", str(app), str(src.resolve())]
+                try:
+                    subprocess.run(command, check=True, stdout=subprocess.DEVNULL,
+                                   stderr=subprocess.DEVNULL, env=os.environ.copy(), timeout=15)
+                except (OSError, subprocess.SubprocessError) as exc:
+                    raise MuseScoreError(f"MuseScore could not be launched: {exc}") from exc
+                pid = None
+                for _ in range(40):
+                    created = self._running_musescore_pids(exe) - before
+                    if len(created) == 1:
+                        pid = created.pop()
+                        break
+                    time.sleep(0.125)
+                if pid is None:
+                    raise MuseScoreError("MuseScore launched but its new process could not be identified")
+                return {"status": "pass", "input_path": str(src.resolve()),
+                        "executable": str(exe), "pid": pid, "command": command,
+                        "launch_mode": "dedicated_process"}
+        try:
+            process = subprocess.Popen(command, stdout=subprocess.DEVNULL,
+                                       stderr=subprocess.DEVNULL, env=os.environ.copy())
+        except OSError as exc:
+            raise MuseScoreError(f"MuseScore could not be launched: {exc}") from exc
+        return {"status": "pass", "input_path": str(src.resolve()),
+                "executable": str(exe), "pid": process.pid, "command": command,
+                "launch_mode": "dedicated_process"}
+
+    @staticmethod
+    def _running_musescore_pids(executable: Path) -> set[int]:
+        try:
+            result = subprocess.run(["ps", "-axo", "pid=,command="], capture_output=True,
+                                    text=True, timeout=5)
+        except (OSError, subprocess.SubprocessError):
+            return set()
+        prefix = str(executable)
+        found = set()
+        for line in result.stdout.splitlines():
+            fields = line.strip().split(None, 1)
+            if len(fields) == 2 and fields[0].isdigit() and fields[1].startswith(prefix):
+                found.add(int(fields[0]))
+        return found
 
     @staticmethod
     def _valid_output(path: Path) -> bool:

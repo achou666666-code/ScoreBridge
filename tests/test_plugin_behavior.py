@@ -34,6 +34,18 @@ def test_sequence_rejects_non_array():
     assert result['error'] == 'Sequence must be an array'
 
 
+def test_score_identity_reports_binding_fields():
+    setup = '''
+var tags={scorebridgeTargetId:"sb-123",workTitle:"Target Score"};
+var curScore={scoreName:"target-file",title:"fallback",nmeasures:7,nstaves:3,
+  metaTag(name){return tags[name]||"";}};
+'''
+    assert run_function('getScoreIdentity', setup, 'getScoreIdentity()') == {
+        'targetId': 'sb-123', 'scoreName': 'target-file', 'title': 'Target Score',
+        'numMeasures': 7, 'numStaves': 3,
+    }
+
+
 def test_range_does_not_report_excluded_staff():
     result = run_function('selectCustomRange', '''
 var selectionState={}, queried=[];
