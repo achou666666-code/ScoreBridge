@@ -1,9 +1,12 @@
+# ScoreBridge MVP baseline: local environments and generated build files.
 .venv/
 __pycache__/
 .pytest_cache/
 *.egg-info/
 build/
 dist/
+
+# macOS filesystem metadata.
 .DS_Store
 
 # Generated OMR, review and editor exports. Keep public input samples and
