@@ -124,9 +124,10 @@ scorebridge bind-score score.mscz --target create-result.json
 
 On macOS the binder reuses a listener only when it already owns the requested
 score; otherwise it returns `wrong_target` without opening or editing anything.
-When no listener exists it launches a dedicated process. It reports `bound` only
-after the plugin reads back the exact target. A process ID, window title or
-successful file-open request alone is not accepted as binding.
+When no listener exists it returns `needs_live_plugin`; it does not click menus
+or launch an unbound editor. Use the default file backend instead. It reports
+`bound` only after the plugin reads back the exact target. A process ID, window
+title or successful file-open request alone is not accepted as binding.
 Before exporting or editing playback, call `score_instrument_audit` on the
 internal score plan. It reports unresolved IDs and detects an accidental piano
 fallback; a part label alone is not evidence of a correct playback sound.
@@ -202,35 +203,33 @@ or invoke a second model. Original, rendered and enhanced images and their page
 mapping remain in the working directory. Filename sorting is a convenience;
 the Agent checks actual page order and identifies non-score pages.
 
-Create the initial MSCZ from the Agent's established score context:
+The Agent records its established score context and notation steps in one plan:
 
 ```bash
-scorebridge create-score examples/orchestra-seed.json --output score.mscz --open
+scorebridge build-score PLAN.json --output score.mscz
 ```
 
-The MCP form is `musescore_create_score(specification, output_path)`. Its returned
-instrument steps use verified MuseScore IDs and can be included in the subsequent
-edit plan. Preserve its returned `target` unchanged in that plan. The intermediate
-MusicXML stays under `.scorebridge/`.
+`examples/native-plan.json` demonstrates the `score` and `steps` fields with
+original demo music. The MCP form is
+`musescore_build_score(specification, steps, output_path)`. It creates the native
+score, applies the Agent's notation and checks the executed steps in one call.
+MuseScore must be installed; a live plugin and computer use are unnecessary.
 
-The Agent can then keep a compact command plan instead of the legacy Score IR:
+For subsequent edits, preserve the returned `target` unchanged in the edit plan:
 
 ```bash
-scorebridge execute-plan PLAN.json
+scorebridge apply-plan EDITS.json --input score.mscz
 ```
 
-`examples/edit-and-save-plan.json` shows the order after creating the scaffold:
-verify the instrument, write positioned content, then save the existing MSCZ. The
-same plan can be sent through `musescore_execute_plan`; each step has a stable ID
-so a partial failure can resume from the last acknowledged command. The plan is
-rejected before the first write unless its `target` exactly matches the connected
-score.
+The MCP equivalent is `musescore_apply_plan(plan_path, input_path)`. Each step has
+a unique ID. A batch executes against a private copy; it publishes MSCZ only
+after matching the target and complete execution receipt. On failure, correct
+the reported step and resubmit; the previous file is preserved. `pass` establishes
+execution of the supplied plan, not a measured source-recognition accuracy.
 
-The MCP equivalent is `musescore_execute_plan(input_path)`. It prevalidates step
-IDs, executes in order, and reports completed IDs and the failed step. It is not
-an atomic transaction. Inspect current editor state after a failure before
-continuing. `executed` means acknowledged commands, not completed transcription.
-Use `musescore_websocket_command` for individual supported operations.
+`musescore_execute_plan` and `musescore_websocket_command` remain available for
+the [optional live backend](#optional-live-websocket-editing). They are not needed
+for the default workflow.
 
 ## MSCZ delivery
 
@@ -242,8 +241,8 @@ by default. Failed MSCZ export returns `error`; failed reopen conversion returns
 
 The legacy IR cannot represent all notation. Do not silently drop unsupported
 lyrics, slurs, articulations or performance semantics to make compilation pass.
-For these, extend the editor adapter or use a documented software-operation
-fallback and verify the actual saved score.
+For these, use supported native commands or extend the editor adapter. Missing
+commands must be reported rather than replaced by computer use.
 
 ## Optional OMR and developer tools
 
@@ -285,7 +284,12 @@ editing and listening tests.
 
 `demos/image-to-score/` is reserved for a small image-to-editable-score walkthrough. `demos/pirates/` is reserved for a later multi-page orchestral case study, screenshots, and validation reports. The public Twinkle smoke run currently produces an evidence package, Audiveris MusicXML, Score IR, and MuseScore round-trip files under `demos/image-to-score/output/twinkle-run/`. Videos are intentionally added only after they are recorded; source PDFs and other copyrighted material do not belong in the public repository.
 
-## Next editor work
+## Release acceptance and future work
 
-Add grace-note and percussion-specific semantics, then run the full local
-PDF-to-MSCZ orchestral regression. Sibelius support is future work.
+The first-release acceptance includes real MCP execution, special notation,
+percussion, a five-measure orchestral regression and a clean installation check.
+See [the fixed acceptance checklist](DELIVERY.md) and
+[runtime evidence](tests/LIVE_EDITOR_RESULTS.md).
+
+Future work includes two-chord tremolos, cross-staff slurs, playback technique
+switching, real Windows/Linux acceptance and Sibelius/Cubase adapters.

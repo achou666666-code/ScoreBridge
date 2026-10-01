@@ -1,8 +1,7 @@
 """Exact live-score binding. No computer use or UI automation."""
 from pathlib import Path
-import time
 
-from .adapter import MuseScoreAdapter, MuseScoreError
+from .adapter import MuseScoreError
 from .websocket import MuseScoreWebSocketBackend
 
 
@@ -48,14 +47,12 @@ def identity_mismatches(expected, actual):
 
 
 def bind_editor_score(input_path, target, adapter=None, bridge=None, timeout=20) -> dict:
-    """Open a score in the WebSocket-owning process and prove its exact identity."""
+    """Bind an existing live listener only when its exact score identity matches."""
     source = Path(input_path)
     if not source.is_file():
         raise MuseScoreError(f"Input does not exist: {source}")
-    backend = adapter or MuseScoreAdapter()
     socket = bridge or MuseScoreWebSocketBackend(timeout=2)
     state = socket.status()
-    opened = None
     if state.get("available"):
         try:
             current = _identity_result(socket.command("getScoreIdentity"))
@@ -73,19 +70,3 @@ def bind_editor_score(input_path, target, adapter=None, bridge=None, timeout=20)
         return {"status":"needs_live_plugin", "computer_use":False,
                 "error":"Live plugin is unavailable; use the official extension backend for unattended file edits",
                 "target":target}
-
-    deadline = time.monotonic() + timeout
-    actual = {}
-    last_error = None
-    while time.monotonic() < deadline:
-        try:
-            actual = _identity_result(socket.command("getScoreIdentity"))
-            if not identity_mismatches(target, actual):
-                return {"status": "bound", "input_path": str(source.resolve()),
-                        "target": target, "actual": actual, "open": opened}
-        except Exception as exc:
-            last_error = str(exc)
-        time.sleep(0.25)
-    return {"status": "error", "error": "MuseScore opened but the connected score identity did not match",
-            "target": target, "actual": actual, "open": opened, "last_error": last_error,
-            "mismatches": identity_mismatches(target, actual)}
