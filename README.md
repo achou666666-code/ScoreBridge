@@ -1,5 +1,7 @@
 # ScoreBridge
 
+[English](README.md) | [简体中文](README.zh-CN.md)
+
 Agent-led sheet-music transcription and MuseScore control. The calling Agent reads
 PDF/PNG/JPG/TIFF/WebP sources, organizes music, and uses editor tools to produce
 an editable, playable **MSCZ**. Audiveris is opt-in assistance.
@@ -291,3 +293,8 @@ See [the fixed acceptance checklist](DELIVERY.md) and
 
 Future work includes two-chord tremolos, cross-staff slurs, playback technique
 switching, real Windows/Linux acceptance and Sibelius/Cubase adapters.
+
+## Documentation updates
+
+Update both language versions in the same change. Keep features, installation
+steps, commands, examples, verification results and supported scope aligned.
