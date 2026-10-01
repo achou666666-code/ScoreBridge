@@ -1,42 +1,65 @@
 ---
 name: scorebridge
-description: Read PDF or image sheet music as an Agent and create editable MuseScore scores using ScoreBridge tools and a live MuseScore bridge.
+description: Read PDF or image sheet music as an Agent and create editable, playable MSCZ files through ScoreBridge's MuseScore MCP or CLI.
 ---
 
 # ScoreBridge
 
-The calling Agent reads the music. Deliver one editable, playable `.mscz` by default.
-Audiveris is optional assistance, not the default recognition engine.
+The calling Agent recognizes the original music. ScoreBridge executes the notation
+plan in MuseScore and delivers one editable, playable `.mscz` by default.
 
-## Source to score
+**The workflow must not depend on computer use, screen control, menu clicking,
+or Accessibility automation.** Use the official MuseScore extension host through
+MCP or CLI. Live WebSocket editing is optional, not a prerequisite.
 
-1. Run `scorebridge doctor` and `scorebridge editor-status`. An installed MuseScore executable is not proof that the live plugin is connected.
-2. Call `score_transcribe(input_path, output_dir)` or `scorebridge prepare INPUT --output WORKDIR`. The default prepares images and returns `awaiting_agent`: this is the Agent's next action, not a request for human review. Read the returned page images. Infer page order from printed numbering and musical continuity; filename sorting is only a starting point. Identify covers yourself before skipping them.
-3. Read each part in musical order. Establish written/concert pitch, instruments, staves, clefs, keys and meters; then notes/rests/chords, voices, duration, tempo changes, lyrics, ties/slurs, dynamics, articulations, techniques, repeats and layout. Preserve printed pitch spelling and per-part key signatures. Use enhancement for readability, retaining the original as evidence when enhancement changes symbols. Resolve uncertain marks from visual and musical context; track guesses internally and continue the complete score.
-4. Keep a compact internal plan per part/measure. It can be tool arguments or JSON; the legacy Score IR is optional. Do not force unsupported notation through a lossy schema. Read [editor-plan.md](references/editor-plan.md) for commands, protocol differences and verified backend limitations.
-5. Call `musescore_create_score` with the established title, measure count, initial meter/key/tempo and ordered part list. It creates the initial MSCZ through MuseScore's tested CLI converter and may open it. Preserve the returned `target` object unchanged. Bind that exact file with `musescore_bind_score`, then put the same target in every edit plan. Never send a mutation merely because a MuseScore window or WebSocket is present. Check actual instrument identity and playback assignment, not just staff labels. Execute the returned `setPartInstrument` steps when correction is needed. Internal MusicXML is permitted for this scaffold and remains private; it is not a user deliverable. Missing MCP actions require an adapter extension or an explicitly reported software-operation fallback, not silently dropped music.
-6. Save MSCZ and check that it reopens, contains the intended parts and music, and uses the intended playback assignments. Keep checks proportional: no mandatory second full recognition pass or human measure-by-measure approval. A file/transport check is not proof of source accuracy or audible sound quality. Report only checks actually performed.
+## Source to MSCZ
 
-## Tools
+1. Run `scorebridge doctor`. Install MuseScore Studio with `--extension` support
+   (verified on macOS Studio 4.7.4), and ScoreBridge's `mcp,image` extras. Neither
+   Audiveris, a running GUI, nor the WebSocket plugin is required for the default route.
+2. Use `score_transcribe(input_path, output_dir)` or `scorebridge prepare INPUT
+   --output WORKDIR`. It prepares evidence and returns `awaiting_agent`: the
+   **calling Agent** now reads the images. This is not human review or an OMR task.
+   Preserve original images, processed images and their page mapping. Order pages
+   from printed numbering and musical continuity; identify covers before skipping.
+3. Read each part in musical order. Establish instruments, staves, clefs, printed
+   keys and meter, then all pitches/spellings, rests, chords, voices, duration,
+   tempo changes, lyrics, ties/slurs, dynamics, techniques and layout. Compare an
+   enhanced image with the original if preprocessing changes a mark. Resolve
+   uncertainty from visual and musical context and continue; no compulsory second
+   recognition pass or human measure-by-measure approval.
+4. Keep a compact internal `score` specification plus ordered `steps` with unique
+   IDs. Legacy Score IR is optional. Read [editor-plan.md](references/editor-plan.md)
+   for command parameters, written pitch/TPC handling and notation scope. Preserve
+   every recognized mark: extend the adapter for missing operations rather than
+   silently discarding music or switching to computer use.
+5. Call `musescore_build_score(specification, steps, output_path)` for complete
+   creation. It privately creates a scaffold, executes the same notation commands
+   in MuseScore's official extension host, checks the execution receipt and
+   publishes MSCZ only if the full batch succeeds. CLI: `scorebridge build-score
+   PLAN.json --output SCORE.mscz`, where PLAN is `{"score":...,"steps":[...]}`.
+   For subsequent edits use `musescore_apply_plan` / `scorebridge apply-plan` with
+   the exact returned `target`. A failed private batch is not published; correct
+   and replay it from the unchanged source. Verify real instrument assignments,
+   not just printed labels. Standard templates carry playback assignments.
+6. Verify saved MSCZ content, intended part identities and note data. Inspect a
+   rendered page when layout matters, and render audio when playback is requested.
+   These are software/output checks, not another recognition pass. A nonempty WAV
+   proves signal, not recognition accuracy or subjective sound quality. Deliver
+   the MSCZ link; intermediate XML, plans and diagnostics remain private.
 
-- `musescore_websocket_status`: negotiate the plugin protocol with read-only ping.
-- `musescore_create_score`: create the initial playable MSCZ from `title`, `measures`, `time`, `key_fifths`, optional `tempo_bpm`, and ordered `parts`. Each part needs a MuseScore-resolvable `instrument_id`; multi-staff parts supply `clefs`, for example `["treble","bass"]`. CLI: `scorebridge create-score SPEC --output SCORE.mscz --open`.
-- `musescore_bind_score`: open an MSCZ in the WebSocket-owning MuseScore process and verify its exact private target ID, name, title, measure count and staff count before editing. CLI: `scorebridge bind-score SCORE.mscz --target CREATE_RESULT.json`.
-- `musescore_open`: launch an existing MSCZ or MusicXML file in MuseScore before live editing.
-- CLI equivalent: `scorebridge open-score INPUT`.
-- `score_instrument_audit`: verify each part maps to a real instrument sound and MIDI program before export.
-- Bundled plugin 2.1: `selectCustomRange`, `addDynamic`, `addTechniqueText`, and `save` can run together in `processSequence`. Range staff indices are zero-based; `endStaff` is exclusive.
-- Bundled plugin 2.2 supports `addArticulation` (staccato, marcato, tenuto) and `addSlur` in batches. Select a single staff range containing notes; slurs require at least two chord positions in one voice. Articulation actions toggle existing marks, so preserve completed step IDs and avoid replaying them.
-- `addDynamic` writes standard engraved dynamics and playback values. `addTechniqueText` writes staff text such as `pizz.`, `arco`, and `con sord.`; text alone does not switch playback techniques.
-- Bundled plugin 2.3: `setKeySignature({staff: 1, measure: 2, fifths: -1})` sets the printed key on one pitched staff. Staff is zero-based, measure is one-based, negative fifths means flats and positive means sharps. Supply the PDF's written key directly; the tool handles the internal concert key. Keep concert-pitch display off. This changes the key signature, not note pitches.
-- Bundled plugin 2.4: `getPageLayout` reads dimensions/margins/page count. `setPageLayout` accepts all six millimeter values (`widthMm`, `heightMm`, `leftMm`, `rightMm`, `topMm`, `bottomMm`); odd/even margins become equal. `setLayoutBreak({measure:4,type:"line"})` sets a break after that measure; use `page` or `none` to change/remove it. Read [editor-plan.md](references/editor-plan.md) for examples and scope.
-- Bundled plugin 2.5: `getMidiChannels` reads diagnostic channel data. `setPartInstrument({part:0,instrumentId:"flute"})` replaces one zero-based part with a standard MuseScore instrument template, including its notation defaults and playback sound. Use this to correct a piano fallback. `setMidiPatch` and arbitrary `setInstrumentSound` are reserved because MIDI metadata is not reliable evidence of the audio resource MuseScore 4 will render.
-- Bundled plugin 2.6: use `addChord` as the precise note-entry command, including for a single note. Supply `staff`, `voice`, `startTick`, `duration:{numerator,denominator}`, `pitches`, and optional written `tpcs`. It supports voices 0-3 and expands an empty secondary voice after locating the target tick. Use `addTie({staff,voice,startTick,pitch})` once per tied pitch; the immediate next chord in that voice must contain the same MIDI pitch. Read [editor-plan.md](references/editor-plan.md) for TPC calculation and examples.
-- Bundled plugin 2.7: use `addRest({staff,voice,startTick,duration})` for positioned rests. Create a tuplet container with `addTuplet({staff,voice,startTick,ratio,duration})`, then write its member notes/rests at the returned rhythmic positions. `duration` is the tuplet's total written span, not each member's duration. Read [editor-plan.md](references/editor-plan.md) for examples and verified scope.
-- Bundled plugin 2.8: use `addGraceNote({staff,voice,startTick,pitch,tpc,type})` after the main chord exists. `type` is one of `acciaccatura`, `appoggiatura`, `grace4`, `grace16`, `grace32`, `grace8after`, `grace16after`, or `grace32after`. The command verifies MuseScore's semantic note type, pitch, written spelling and before/after placement before reporting success.
-- `musescore_websocket_command`: execute one plugin-supported command; plugin errors propagate.
-- `musescore_execute_plan`: ordered JSON command plan with completed IDs on failure. Every plan requires the exact `target` returned by score creation. A mismatch returns `wrong_target` and sends no edit. CLI: `scorebridge execute-plan PLAN.json`.
-- `score_finalize`: legacy Score IR compilation route delivering MSCZ, with temporary XML and audit data under `.scorebridge/`.
-- `score_transcribe(..., mode="omr")`: opt-in legacy OMR/review route. Do not call it unless OMR assistance is wanted.
+## Optional live editing
 
-Deliver the MSCZ link. Keep plans, source copies, intermediate formats and diagnostics in the working directory rather than presenting them as additional deliverables.
+If the user wants to edit a currently open document, the bundled QML/WebSocket
+plugin can be enabled once by the user. `musescore_connect` only checks connection;
+it does not click menus. `musescore_bind_score` and `musescore_execute_plan` check
+exact document identity before edits. Live plans can partially apply; retain
+completed IDs and inspect state after a timeout instead of blindly replaying.
+
+`addTechniqueText` preserves instructions such as `pizz.` and `con sord.`;
+text alone does not select a playback technique. Arbitrary MuseSound/VST resources,
+cross-staff slurs and two-chord tremolos need additional backend support.
+Do not report unsupported effects as implemented.
+
+Audiveris is opt-in assistance via `score_transcribe(..., mode="omr")`, not the
+recognition engine for this default workflow.

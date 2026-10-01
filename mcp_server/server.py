@@ -28,7 +28,7 @@ mcp = FastMCP("ScoreBridge")
 
 @mcp.tool()
 def musescore_connect() -> dict:
-    """Activate the bundled plugin in an open macOS MuseScore and verify connection."""
+    """Check a live plugin connection. For unattended work use musescore_build_score/apply_plan."""
     from scorebridge.musescore.connect import connect_editor
     return connect_editor()
 
@@ -96,7 +96,7 @@ def musescore_bind_score(input_path: str, target: dict, executable: str = "", ur
         return {"status": "error", "error": str(exc)}
 
 @mcp.tool()
-def musescore_create_score(specification: dict, output_path: str, executable: str = "", open_editor: bool = True) -> dict:
+def musescore_create_score(specification: dict, output_path: str, executable: str = "", open_editor: bool = False) -> dict:
     """Create a playable MSCZ scaffold from parts, meter and measure count, then optionally open it."""
     return create_seed_score(specification, output_path, executable, open_editor)
 
@@ -206,6 +206,18 @@ def score_transcribe(input_path: str, output_dir: str, decisions_path: str = "",
     if mode == "omr":
         return transcribe_score(input_path, output_dir, decisions_path, audiveris, musescore, dpi)
     return {"status": "error", "error": "mode must be agent or omr"}
+
+@mcp.tool()
+def musescore_build_score(specification: dict, steps: list, output_path: str, executable: str = "") -> dict:
+    """Create and precisely edit MSCZ using MuseScore's official extension host. No computer use or running GUI/plugin required. Agent must supply recognized music; this tool does not recognize it."""
+    from scorebridge.musescore.build import build_agent_score
+    return build_agent_score(specification, steps, output_path, executable)
+
+@mcp.tool()
+def musescore_apply_plan(plan_path: str, input_path: str, output_path: str = "", executable: str = "") -> dict:
+    """Apply an exact-target notation plan without computer use. Publish MSCZ only when every MuseScore command succeeds; failed batches preserve input and existing output."""
+    from scorebridge.musescore.extension import execute_extension_plan_file
+    return execute_extension_plan_file(plan_path, input_path, output_path, executable)
 
 @mcp.tool()
 def musescore_execute_plan(input_path: str, url: str = "") -> dict:

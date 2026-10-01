@@ -89,8 +89,8 @@ def test_create_seed_score_converts_opens_and_returns_instrument_plan(tmp_path):
     assert [step["action"] for step in result["instrument_steps"]] == [
         "setPartInstrument", "setPartInstrument", "setPartInstrument"
     ]
-    assert result["instrument_steps"][1]["params"] == {"part": 1, "instrumentId": "bb-clarinet"}
-    assert result["instrument_steps"][2]["params"] == {"part": 2, "instrumentId": "piano"}
+    assert result["instrument_steps"][1]["params"] == {"part": 1, "instrumentId": "bb-clarinet", "name":"Clarinet in B-flat"}
+    assert result["instrument_steps"][2]["params"] == {"part": 2, "instrumentId": "piano", "name":"Piano"}
     assert Path(result["internal_musicxml"]).is_file()
 
 
@@ -113,3 +113,23 @@ def test_explicit_sound_allows_catalog_extension(tmp_path):
     root = ET.parse(output).getroot()
     assert root.findtext("./part-list/score-part/score-instrument/instrument-sound") == "wind.custom"
     assert root.findtext("./part-list/score-part/midi-instrument/midi-program") == "75"
+
+
+def test_percussion_seed_has_real_unpitched_channel_and_no_key(tmp_path):
+    spec={'title':'Drums','measures':1,'key_fifths':-2,
+          'parts':[{'name':'Snare','instrument_id':'snare-drum'}]}
+    root=ET.parse(build_seed_musicxml(spec,str(tmp_path/'drums.musicxml'))).getroot()
+    assert root.findtext('./part-list/score-part/midi-instrument/midi-channel')=='10'
+    assert root.findtext('./part-list/score-part/midi-instrument/midi-unpitched')=='39'
+    assert root.findtext('./part/measure/attributes/clef/sign')=='percussion'
+    assert root.find('./part/measure/attributes/key') is None
+
+
+def test_catalog_defaults_include_orchestra_without_local_instrument_edits(tmp_path):
+    from scorebridge.musescore.catalog import scaffold_instrument
+    assert scaffold_instrument('bass-clarinet')['transpose_chromatic']==-14
+    assert scaffold_instrument('contrabass')['transpose_chromatic']==-12
+    assert scaffold_instrument('violoncello')['clef']=='bass'
+    spec={'title':'Strings','measures':1,'parts':[{'name':'Cello','instrument_id':'cello'}]}
+    r=create_seed_score(spec,str(tmp_path/'strings.mscz'),adapter=FakeAdapter())
+    assert r['parts'][0]['instrument_id']=='violoncello'

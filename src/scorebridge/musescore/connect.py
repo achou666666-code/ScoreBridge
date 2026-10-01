@@ -1,90 +1,23 @@
-"""Enable the installed plugin in a running macOS MuseScore instance."""
+"""Exact live-score binding. No computer use or UI automation."""
 from pathlib import Path
-import subprocess
-import sys
 import time
 
 from .adapter import MuseScoreAdapter, MuseScoreError
 from .websocket import MuseScoreWebSocketBackend
 
 
-def _process_selector(pid=None):
-    if pid is None:
-        return 'set targetProcess to first process whose name is "mscore"'
-    return f'set targetProcess to first process whose unix id is {int(pid)}'
-
-
 def connect_editor(pid=None, timeout=12) -> dict:
-    bridge = MuseScoreWebSocketBackend(timeout=2)
-    state = bridge.status()
-    if state['available']:
-        return {'status': 'connected', 'activation': 'already_running', **state}
-    if sys.platform != 'darwin':
-        return {'status': 'error', 'error': 'Automatic plugin activation currently supports macOS only.'}
-    # Locate the plugin across menus; MuseScore may expose either the extension
-    # filename or its QML menuPath label depending on whether plugins were
-    # reloaded in the current process.
-    selector = _process_selector(pid)
-    script = f'''tell application "System Events"
-{selector}
-tell targetProcess
-set frontmost to true
-if exists window "欢迎" then
-    click button "确定" of window "欢迎"
-    delay 0.5
-end if
-set pluginNames to {{"musescore-mcp-websocket", "MuseScore API Server"}}
-repeat with topItem in menu bar items of menu bar 1
-    try
-        set topName to name of topItem
-        set itemNames to name of every menu item of menu 1 of menu bar item topName of menu bar 1
-        repeat with pluginName in pluginNames
-            if itemNames contains pluginName then return topName & linefeed & pluginName
-        end repeat
-    end try
-end repeat
-error "Installed musescore-mcp-websocket menu item was not found"
-end tell
-end tell'''
-    attempts = max(1, int(timeout / 0.25))
-    menu_name = ""
-    lookup_error = ""
-    for _ in range(attempts):
-        if menu_name:
-            break
-        try:
-            found = subprocess.run(['osascript', '-e', script], check=True, capture_output=True,
-                                   text=True, timeout=10)
-            menu_name = found.stdout.strip()
-        except (OSError, subprocess.SubprocessError) as exc:
-            lookup_error = getattr(exc, 'stderr', None) or str(exc)
-        if not menu_name:
-            time.sleep(0.25)
-    if not menu_name:
-        return {'status': 'error', 'error': lookup_error or 'Plugin menu lookup returned no menu name.',
-                'hint': 'Open MuseScore with a score; install the bundled plugin and allow Accessibility access.'}
-    try:
-        menu_name, plugin_name = menu_name.splitlines()[:2]
-        activate = f'''on run argv
-tell application "System Events"
-{selector}
-tell targetProcess
-click menu item (item 2 of argv) of menu 1 of menu bar item (item 1 of argv) of menu bar 1
-end tell
-end tell
-end run'''
-        subprocess.run(['osascript', '-e', activate, menu_name, plugin_name], check=True,
-                       capture_output=True, text=True, timeout=10)
-    except (OSError, subprocess.SubprocessError) as exc:
-        detail = getattr(exc, 'stderr', None) or str(exc)
-        return {'status': 'error', 'error': detail,
-                'hint': 'Open MuseScore with a score; install the bundled plugin and allow Accessibility access.'}
-    for _ in range(attempts):
-        state = bridge.status()
-        if state['available']:
-            return {'status': 'connected', 'activation': 'menu', **state}
-        time.sleep(0.25)
-    return {'status': 'error', 'error': 'Plugin menu was activated but WebSocket did not connect.', 'editor': state}
+    """Check a live connection without screen control or Accessibility automation.
+
+    Use the official extension backend for unattended file-based notation. Live
+    WebSocket use requires the user to enable the plugin once in MuseScore.
+    """
+    state = MuseScoreWebSocketBackend(timeout=2).status()
+    if state.get('available'):
+        return {'status':'connected', 'activation':'already_running', **state}
+    return {'status':'needs_live_plugin', 'editor':state, 'computer_use':False,
+            'error':'No live MuseScore plugin is listening',
+            'next':'Use musescore_build_score / scorebridge build-score for unattended creation, or enable the plugin once for live editing.'}
 
 
 def _identity_result(response):
@@ -93,6 +26,10 @@ def _identity_result(response):
 
 
 def identity_mismatches(expected, actual):
+    if not isinstance(expected, dict):
+        return {"target":"expected target must be an object"}
+    if not isinstance(actual, dict):
+        actual = {}
     required = ("targetId", "scoreName", "title", "numMeasures", "numStaves")
     missing = [key for key in required if key not in expected]
     if missing:
@@ -133,12 +70,9 @@ def bind_editor_score(input_path, target, adapter=None, bridge=None, timeout=20)
                 "mismatches": identity_mismatches(target, current),
                 "next": "Stop the current MuseScore MCP listener, then bind this score again."}
     else:
-        opened = backend.launch_score_process(str(source))
-        pid = opened["pid"]
-        activation = connect_editor(pid=pid, timeout=timeout)
-        if not activation or activation.get("status") != "connected":
-            return {"status": "error", "error": "MuseScore opened but its MCP plugin could not be activated",
-                    "target": target, "open": opened, "activation": activation}
+        return {"status":"needs_live_plugin", "computer_use":False,
+                "error":"Live plugin is unavailable; use the official extension backend for unattended file edits",
+                "target":target}
 
     deadline = time.monotonic() + timeout
     actual = {}

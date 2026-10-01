@@ -1,0 +1,29 @@
+{
+  "score": {
+    "title": "ScoreBridge — Native MCP Demo",
+    "measures": 2,
+    "time": {"beats": 4, "beat_type": 4},
+    "parts": [
+      {"name": "Flute", "instrument_id": "flute"},
+      {"name": "Piano", "instrument_id": "piano", "clefs": ["treble", "bass"]},
+      {"name": "Snare Drum", "instrument_id": "snare-drum"}
+    ]
+  },
+  "steps": [
+    {"id": "flute-c", "action": "addChord", "params": {"staff": 0, "voice": 0, "startTick": 0, "duration": {"numerator": 1, "denominator": 4}, "pitches": [72], "tpcs": [14]}},
+    {"id": "flute-d", "action": "addChord", "params": {"staff": 0, "voice": 0, "startTick": 480, "duration": {"numerator": 1, "denominator": 4}, "pitches": [74], "tpcs": [16]}},
+    {"id": "piano-chord", "action": "addChord", "params": {"staff": 1, "voice": 0, "startTick": 0, "duration": {"numerator": 1, "denominator": 2}, "pitches": [60, 64, 67]}},
+    {"id": "piano-bass", "action": "addChord", "params": {"staff": 2, "voice": 0, "startTick": 0, "duration": {"numerator": 1, "denominator": 2}, "pitches": [48]}},
+    {"id": "snare", "action": "addPercussionNote", "params": {"staff": 3, "voice": 0, "startTick": 0, "duration": {"numerator": 1, "denominator": 4}, "pitches": [38]}},
+    {"id": "snare-roll", "action": "addTremolo", "params": {"staff": 3, "voice": 0, "startTick": 0, "type": "buzz"}},
+    {"id": "arpeggio", "action": "addArpeggio", "params": {"staff": 1, "startTick": 0, "type": "up"}},
+    {"id": "flute-grace", "action": "addGraceNotes", "params": {"staff": 0, "voice": 0, "startTick": 480, "type": "grace16", "notes": [{"pitch": 71, "tpc": 19}, {"pitch": 72, "tpc": 14}]}},
+    {"id": "flute-range", "action": "selectCustomRange", "params": {"startStaff": 0, "endStaff": 1, "startTick": 0, "endTick": 960}},
+    {"id": "flute-slur", "action": "addSlur", "params": {}},
+    {"id": "flute-range-dynamic", "action": "selectCustomRange", "params": {"startStaff": 0, "endStaff": 1, "startTick": 0, "endTick": 480}},
+    {"id": "flute-mp", "action": "addDynamic", "params": {"type": "mp"}},
+    {"id": "flute-text", "action": "addTechniqueText", "params": {"text": "dolce"}},
+    {"id": "tempo", "action": "setTempo", "params": {"staff": 0, "startTick": 0, "bpm": 96, "beatUnit": "quarter"}},
+    {"id": "save", "action": "save", "params": {}}
+  ]
+}

@@ -1,4 +1,56 @@
-# Live editor plans
+# Agent plans: default file backend
+
+Use `musescore_build_score(specification, steps, output_path)` or
+`scorebridge build-score PLAN.json --output SCORE.mscz` for unattended creation.
+PLAN contains `score` plus ordered `steps`. See the executable
+[example](../../../examples/native-plan.json). This route does not use computer
+use, Accessibility, a running GUI or WebSocket. It creates a private scaffold,
+executes the commands below in MuseScore's official extension host, validates
+per-run acknowledgements stored in MSCZ, then publishes the native score.
+
+For editing, `musescore_apply_plan(plan_path, input_path, output_path)` accepts
+`{"target": THE_RETURNED_TARGET, "steps": [...]}`. `output_path` defaults to the
+input. Each private batch is published only after every step succeeds. An error
+or `incomplete` leaves input and existing output unchanged, so a corrected batch
+can be replayed safely from that unchanged file. This differs from the live
+WebSocket partial-write behavior described below. `save` requests are fulfilled
+by the converter; no Save dialog is opened.
+
+## Positioned special notation (2.11)
+
+All commands use zero-based `staff`, optional `voice` (0–3, default 0), and
+`startTick`. A quarter note is 480 ticks. Write the main chord first.
+
+| Action | Additional parameters | Verified scope |
+| --- | --- | --- |
+| `addGraceNotes` | `type`, `notes:[{pitch,tpc},...]` | Group in input musical order; handles MuseScore's prepend behavior |
+| `addGraceSlur` | optional zero-based `graceIndex` | Connects a grace note to its main chord |
+| `addTremolo` | `type: r8/r16/r32/r64/buzz` | Single-chord tremolos; uses the running version's enum |
+| `addArpeggio` | `type: normal/up/down/bracket/upStraight/downStraight` | One staff; `span:1` |
+| `addFermata` | `type: normal/short/long/veryShort/veryLong`, optional `below`, `timeStretch` | Semantic fermata and playback duration factor |
+| `addOrnament` | `type: trill/shortTrill/mordent/turn/invertedTurn` | Chord-attached ornament |
+| `getDrumset` | optional tick | Reads valid drum pitches, names, lines, noteheads and voices |
+| `addPercussionNote` | `pitches`, `duration` | Same position/duration as addChord; rejects pitches absent from the actual drumset |
+| `setAccidental` | `pitch`, `type: natural/sharp/flat/doubleSharp/doubleFlat`, `bracket: none/parentheses/square` | Forced/courtesy accidental on a main note |
+| `setNoteHead` | `pitch`, `type: normal/cross/diamond/triangle` | Notehead appearance; for percussion updates the part's drum-pitch mapping |
+| `setTempo` | `bpm`, `beatUnit: quarter/dottedQuarter/half/eighth`, optional `text` | For dotted quarter = 124, playback uses quarter = 186 |
+
+`addArticulation` also accepts `accent`. Select an explicit single-staff range
+before dynamics, articulations, slurs, lyrics or technique text. Slurs retain
+both endpoint chords even at the end of the last measure. `addLyrics` requires
+an array of strings, optional zero-based `verse`.
+
+Pitched templates include flute, oboe, Bb/bass clarinet, bassoon, horn, Bb trumpet,
+trombone, tuba, timpani, violin, viola, violoncello, contrabass, piano, glockenspiel
+and marimba. Use `cello` in a specification if desired; it resolves to the real
+MuseScore template `violoncello`. Multi-staff instruments supply `clefs`.
+Unpitched templates include percussion, snare-drum, bass-drum, cymbal,
+crash-cymbal, tambourine and triangle. Their scaffold uses channel 10, an
+unpitched instrument, percussion clef and no key signature. A name alone is
+never treated as a playback assignment.
+
+## Optional live WebSocket backend
+
 
 A plan is execution data, not a new mandatory music representation. Use small,
 ordered batches with stable IDs:

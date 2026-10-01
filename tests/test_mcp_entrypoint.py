@@ -14,4 +14,7 @@ def test_server_exposes_agent_default():
     assert 'musescore_execute_plan' in tools
     assert 'musescore_create_score' in tools
     assert 'musescore_bind_score' in tools
-    assert tools['musescore_create_score'].inputSchema['properties']['open_editor']['default'] is True
+    assert tools['musescore_create_score'].inputSchema['properties']['open_editor']['default'] is False
+
+    assert "musescore_build_score" in tools
+    assert "musescore_apply_plan" in tools

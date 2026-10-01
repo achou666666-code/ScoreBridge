@@ -29,9 +29,24 @@ def main():
     create_score.add_argument("--executable", default="")
     create_score.add_argument("--open", action="store_true", dest="open_editor")
     execute=sub.add_parser("execute-plan"); execute.add_argument("input"); execute.add_argument("--url", default="")
+    apply=sub.add_parser("apply-plan"); apply.add_argument("plan"); apply.add_argument("--input", required=True); apply.add_argument("--output", default=""); apply.add_argument("--executable", default="")
+    build=sub.add_parser("build-score"); build.add_argument("plan"); build.add_argument("--output", required=True); build.add_argument("--executable", default="")
     validate=sub.add_parser("validate"); validate.add_argument("input")
     compile_cmd=sub.add_parser("compile"); compile_cmd.add_argument("input"); compile_cmd.add_argument("--output", required=True)
     args=parser.parse_args()
+    if args.command in {"apply-plan", "build-score"}:
+        from .musescore.extension import execute_extension_plan_file
+        from .musescore.build import build_agent_score
+        try:
+            if args.command == "apply-plan":
+                report = execute_extension_plan_file(args.plan, args.input, args.output, args.executable)
+            else:
+                plan = json.loads(Path(args.plan).read_text(encoding="utf-8"))
+                report = build_agent_score(plan.get("score"), plan.get("steps"), args.output, args.executable)
+        except (ValueError, OSError) as exc:
+            report = {"status":"error", "error":str(exc)}
+        print(json.dumps(report, ensure_ascii=False, indent=2))
+        raise SystemExit(0 if report.get("status") in {"executed","pass"} else 1)
     if args.command == "editor-connect":
         from .musescore.connect import connect_editor
         report = connect_editor()
@@ -82,7 +97,7 @@ def main():
             raise SystemExit(1)
         report = create_seed_score(specification, args.output, args.executable, args.open_editor)
         print(json.dumps(report, ensure_ascii=False, indent=2))
-        raise SystemExit(0 if report["status"] in {"pass", "incomplete"} else 1)
+        raise SystemExit(0 if report["status"] == "pass" else 1)
     if args.command == "execute-plan":
         from .agent_workflow import execute_plan_file
         report = execute_plan_file(args.input, args.url)

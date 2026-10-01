@@ -7,6 +7,7 @@ from xml.etree.ElementTree import Element, ElementTree, SubElement
 from scorebridge.instruments import instrument_spec
 
 from .adapter import MuseScoreAdapter, MuseScoreError
+from .catalog import scaffold_instrument
 
 
 DIVISIONS = 24
@@ -29,7 +30,7 @@ _MUSESCORE_ID_ALIASES = {
     "brass.trombone": "trombone", "trombone": "trombone",
     "brass.tuba": "tuba", "tuba": "tuba", "drum.timpani": "timpani", "timpani": "timpani",
     "strings.violin": "violin", "violin": "violin", "strings.viola": "viola", "viola": "viola",
-    "strings.cello": "cello", "violoncello": "cello", "cello": "cello",
+    "strings.cello": "violoncello", "violoncello": "violoncello", "cello": "violoncello",
     "strings.contrabass": "contrabass", "contrabass": "contrabass",
     "keyboard.piano": "piano", "piano": "piano",
 }
@@ -84,6 +85,7 @@ def _normalise_spec(spec: dict) -> dict:
         musescore_id = part.get("musescore_id", _MUSESCORE_ID_ALIASES.get(instrument_id.casefold(), instrument_id))
         if not isinstance(musescore_id, str) or not musescore_id.strip():
             raise ValueError(f"parts[{index}].musescore_id must be a nonempty string")
+        known = {**known, **scaffold_instrument(musescore_id)}
         sound = part.get("instrument_sound", known.get("instrument_sound"))
         program = part.get("midi_program", known.get("midi_program"))
         if not isinstance(sound, str) or not sound.strip() or not isinstance(program, int) or not 1 <= program <= 128:
@@ -91,7 +93,7 @@ def _normalise_spec(spec: dict) -> dict:
                 f"parts[{index}] instrument is unresolved; provide a known instrument_id "
                 "or explicit instrument_sound and midi_program"
             )
-        clefs = part.get("clefs", [part.get("clef", "treble")])
+        clefs = part.get("clefs", [part.get("clef", known.get("clef", "treble"))])
         if not isinstance(clefs, list) or not clefs or len(clefs) > 4:
             raise ValueError(f"parts[{index}].clefs must contain one to four clefs")
         if any(clef not in _CLEFS for clef in clefs):
@@ -99,6 +101,7 @@ def _normalise_spec(spec: dict) -> dict:
         normalised_parts.append({
             "id": f"P{index + 1}", "name": name.strip(), "instrument_id": musescore_id.strip(),
             "instrument_sound": sound.strip(), "midi_program": program, "clefs": clefs,
+            "unpitched": known.get("unpitched", False), "midi_unpitched": known.get("midi_unpitched"),
             "transpose_diatonic": part.get("transpose_diatonic", known.get("transpose_diatonic")),
             "transpose_chromatic": part.get("transpose_chromatic", known.get("transpose_chromatic")),
         })
@@ -126,8 +129,10 @@ def build_seed_musicxml(spec: dict, output_path: str, target_id: str = "") -> Pa
         SubElement(score_instrument, "instrument-name").text = part["name"]
         SubElement(score_instrument, "instrument-sound").text = part["instrument_sound"]
         midi = SubElement(score_part, "midi-instrument", id=part["id"] + "-I1")
-        SubElement(midi, "midi-channel").text = str(_PITCHED_MIDI_CHANNELS[index % len(_PITCHED_MIDI_CHANNELS)])
+        SubElement(midi, "midi-channel").text = str(10 if part["unpitched"] else _PITCHED_MIDI_CHANNELS[index % len(_PITCHED_MIDI_CHANNELS)])
         SubElement(midi, "midi-program").text = str(part["midi_program"])
+        if part["unpitched"]:
+            SubElement(midi, "midi-unpitched").text = str(part["midi_unpitched"])
     for part in data["parts"]:
         part_element = SubElement(root, "part", id=part["id"])
         for measure_number in range(1, data["measures"] + 1):
@@ -135,8 +140,9 @@ def build_seed_musicxml(spec: dict, output_path: str, target_id: str = "") -> Pa
             if measure_number == 1:
                 attributes = SubElement(measure, "attributes")
                 SubElement(attributes, "divisions").text = str(DIVISIONS)
-                key = SubElement(attributes, "key")
-                SubElement(key, "fifths").text = str(data["key_fifths"])
+                if not part["unpitched"]:
+                    key = SubElement(attributes, "key")
+                    SubElement(key, "fifths").text = str(data["key_fifths"])
                 time = SubElement(attributes, "time")
                 SubElement(time, "beats").text = str(data["beats"])
                 SubElement(time, "beat-type").text = str(data["beat_type"])
@@ -205,7 +211,7 @@ def create_seed_score(spec: dict, output_path: str, executable: str = "", open_e
                   for index, part in enumerate(data["parts"])],
         "instrument_steps": [
             {"id": f"instrument-{index + 1}", "action": "setPartInstrument",
-             "params": {"part": index, "instrumentId": part["instrument_id"]}}
+             "params": {"part": index, "instrumentId": part["instrument_id"], "name":part["name"]}}
             for index, part in enumerate(data["parts"])
         ],
         "internal_musicxml": str(internal.resolve()),

@@ -22,7 +22,7 @@ def diagnose() -> dict:
     musescore = os.environ.get("MUSESCORE_BIN") or shutil.which("mscore") or shutil.which("MuseScore") or "/Applications/MuseScore 4.app/Contents/MacOS/mscore"
     checks.append(_check("audiveris", Path(audiveris).exists(), str(audiveris), required=False))
     checks.append(_check("websockets", importlib.util.find_spec("websockets") is not None,
-                         "required for live MuseScore editing; install .[websocket]"))
+                         "optional live editing; unattended extension backend does not require WebSocket", required=False))
     checks.append(_check("musescore", Path(musescore).exists(), str(musescore)))
     checks.append(_check("mcp", importlib.util.find_spec("mcp") is not None, "install with pip install -e '.[mcp]'", required=False))
     required = [c for c in checks if c["status"] == "missing"]

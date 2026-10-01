@@ -1,11 +1,5 @@
 # ScoreBridge
 
-On macOS, after opening a score, `scorebridge editor-connect` (MCP:
-`musescore_connect`) activates the installed bundled plugin and verifies its
-WebSocket connection. An existing connection is reused without clicking the
-plugin again. MuseScore must be running and macOS Accessibility permission must
-be available. This command does not install the plugin or restart MuseScore.
-
 Agent-led sheet-music transcription and MuseScore control. The calling Agent reads
 PDF/PNG/JPG/TIFF/WebP sources, organizes music, and uses editor tools to produce
 an editable, playable **MSCZ**. Audiveris is opt-in assistance.
@@ -17,10 +11,32 @@ PDF / images → source preparation → Agent reads the score
 → internal music / command plan → MuseScore editing → MSCZ
 ```
 
-The current implementation prepares source images, executes ordered live-plugin
-commands, and offers a legacy Score IR compilation adapter. It does **not** yet
-supply every MuseScore editing operation or prove high-accuracy orchestral
-transcription end to end. See the [actual editor capabilities](skills/scorebridge/references/editor-plan.md).
+The default backend runs Agent notation commands in MuseScore's official
+`--extension` host. **No computer use, screen control, menu automation,
+Accessibility permission, running GUI or live plugin is required.** The Agent
+recognizes the score; ScoreBridge does not embed a recognition model.
+See [command details and supported notation](skills/scorebridge/references/editor-plan.md).
+
+## Create a score
+
+After the Agent reads the source, it supplies a specification and notation steps:
+
+```bash
+.venv/bin/scorebridge build-score examples/native-plan.json --output my-score.mscz
+```
+
+MCP equivalent: `musescore_build_score(specification, steps, output_path)`.
+For later edits, supply the returned exact target in a plan and use
+`musescore_apply_plan` or `scorebridge apply-plan PLAN.json --input SCORE.mscz`.
+The extension executes against a private copy and writes a per-run receipt into
+MSCZ. A failed or wrong-target batch never replaces the source or an existing
+output. Successful batches publish one native MSCZ.
+
+The file backend is verified on **macOS / MuseScore Studio 4.7.4**. Linux and
+Windows extension paths are provided, but their runtime acceptance is still
+unverified. Use `SCOREBRIDGE_EXTENSION_DIR` to override the extension install path.
+MuseScore must support `--extension`. Future Sibelius/Cubase adapters are outside
+this release.
 
 ## Install
 
@@ -30,11 +46,10 @@ cd ScoreBridge
 python3 -m venv .venv
 .venv/bin/python -m pip install -e '.[mcp,image,websocket,test]'
 .venv/bin/scorebridge doctor
-.venv/bin/scorebridge editor-status
 ```
 
-Install MuseScore separately. `doctor` checks dependencies; `editor-status`
-actually contacts a running plugin. Audiveris is optional and its absence does
+Install MuseScore separately. `doctor` checks dependencies. The default extension route does not need a
+WebSocket listener. `editor-status` checks the optional live plugin. Audiveris is optional and its absence does
 not fail the environment check. Install the skill folder `skills/scorebridge`
 in your Agent's skill directory, and configure the MCP server with the environment's
 Python executable and the absolute path to `mcp_server/server.py`:
@@ -42,6 +57,13 @@ Python executable and the absolute path to `mcp_server/server.py`:
 ```bash
 .venv/bin/python mcp_server/server.py
 ```
+
+## Optional live WebSocket editing
+
+The following setup applies only to an already-open interactive document.
+It is not needed for `build-score` or `apply-plan`. `editor-connect` checks a
+listener without controlling the screen; enable the plugin once in MuseScore
+for live use.
 
 The compatible MuseScore QML plugin is included in `plugins/`. On macOS,
 install it with:

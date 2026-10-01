@@ -238,3 +238,44 @@ must be corrected before it is advertised as standard playback dynamics.
 The live selection response also included staff1 for endStaff=1 although the
 saved edits correctly affected only staff0. Its reporting loop needs to match
 the exclusive end-staff convention used by MuseScore selection.
+
+## 2026-10-02 — no-computer-use extension host and orchestral regression
+
+Platform: macOS, MuseScore Studio 4.7.4. Source preparation and recognition were
+performed by the calling Agent. No Audiveris, desktop screen control,
+Accessibility automation or WebSocket listener was used for these runs.
+
+- Actual MCP stdio client initialized the server, listed tools and called
+  `musescore_build_score` with the public native demo plan. All 18 steps
+  (including three template/name checks) succeeded and published MSCZ.
+- A five-measure original fixture executed all 119 steps. Native MSCX confirmed
+  single-chord `r32` and `buzzroll`, arpeggio, long fermata/timeStretch=2,
+  trill, grace note, dynamics, slur, lyrics and staff text. Percussion staves
+  retained their drum maps and pitches. Rendered stereo 44.1 kHz float WAV had
+  5,502,968 bytes of sample data, peak 0.3028 and RMS 0.0483, proving nonzero signal.
+- The owner's orchestral PDF first score page was read by the Agent and converted
+  from a new plan, not copied from the previous MSCZ. All 382 steps succeeded.
+  Native-file checks found 22 parts, 23 staves, five full 12/8 measures on every
+  staff (115 staff-measures), 222 notes including two grace notes, four slurs,
+  printed key assignments and written TPCs, the triangle's diamond head, ordered
+  grace pitches A3/B3, and a parenthesized courtesy natural. Tempo was dotted
+  quarter = 124, stored as 3.1 quarter beats/second (quarter = 186).
+- Standard instrument replacement was checked against actual MuseScore template
+  IDs. Printed names were restored/verified after replacement. Cello resolves to
+  `violoncello`, not the nonexistent `cello` template. No piano fallback was used
+  for the orchestra. The optional mallet part was assigned Glockenspiel for this
+  excerpt; its printed part label lists Bells/Marimba without selecting one.
+- MuseScore CLI read the saved orchestral MSCZ and rendered PDF and nonzero WAV.
+  The page rendering was inspected for actual score layout. This is output
+  verification, not a second recognition workflow or universal accuracy claim.
+- An actual invalid-drum batch was tested against the saved score: no partial
+  output was published and the source SHA256 remained unchanged. Unit tests also
+  cover stale execution receipts, wrong targets, and preserving an old output.
+
+Saving exposed and fixed problems that in-memory acknowledgements alone missed:
+MuseScore version-specific tremolo enums, grace-note prepending, generated
+accidental roles, percussion noteheads being recomputed from the drum map, lost
+part labels on replacement, and selection ending at the final chord rather than
+its exclusive barline. The file backend now publishes only a verified per-run
+receipt. A valid output can still be produced before the local Cantai component
+causes a nonzero process exit; absent/mismatched receipts are rejected.
