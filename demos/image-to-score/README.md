@@ -2,7 +2,7 @@
 
 The default route uses the calling multimodal Agent to read the source image,
 then MuseScore MCP to execute its notation plan and save editable MSCZ.
-Computer use and Audiveris are not dependencies.
+The Agent supplies the musical content; ScoreBridge handles software execution.
 
 Run from the repository root:
 

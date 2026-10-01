@@ -6,10 +6,8 @@ Skill instructs the calling Agent → Agent reads original PDF/images → intern
 notation plan → MuseScore MCP executes the plan → MuseScore handles engraving,
 instruments, playback and saving → MSCZ is the main user deliverable.
 
-Computer use, screenshots of the desktop, menu automation and Accessibility are
-not dependencies. Audiveris remains optional. No mandatory human review or
-second recognition pass is inserted. Recognition is performed by the calling
-multimodal Agent; ScoreBridge is its software-operation tool.
+Recognition is performed by the calling multimodal Agent. ScoreBridge executes
+its notation plan in MuseScore. Audiveris remains an optional auxiliary route.
 
 ## Fixed acceptance checkpoints
 
@@ -21,7 +19,7 @@ accuracy. Future features do not change this release's denominator.
 | 64% | Source preparation, base notation and standard instruments | Completed in prior commits |
 | 73% | Exact document identity before live edits | Completed, CI passed |
 | 82% | Special notation and real unpitched percussion | Passed native-file and audio checks |
-| 91% | Unattended creation/edit/save without computer use | Passed official extension host and MCP stdio call |
+| 91% | MCP creation, editing and saving | Passed official extension host and MCP stdio call |
 | 100% | Native orchestral regression, installed-package checks and release | Acceptance passed; release tracked by `v0.1.0` |
 
 ## What the delivered route does

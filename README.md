@@ -11,10 +11,8 @@ PDF / images → source preparation → Agent reads the score
 → internal music / command plan → MuseScore editing → MSCZ
 ```
 
-The default backend runs Agent notation commands in MuseScore's official
-`--extension` host. **No computer use, screen control, menu automation,
-Accessibility permission, running GUI or live plugin is required.** The Agent
-recognizes the score; ScoreBridge does not embed a recognition model.
+The Agent reads the source and supplies a notation plan. ScoreBridge executes
+that plan through MuseScore's official `--extension` host and saves native MSCZ.
 See [command details and supported notation](skills/scorebridge/references/editor-plan.md).
 
 ## Create a score
@@ -213,7 +211,7 @@ scorebridge build-score PLAN.json --output score.mscz
 original demo music. The MCP form is
 `musescore_build_score(specification, steps, output_path)`. It creates the native
 score, applies the Agent's notation and checks the executed steps in one call.
-MuseScore must be installed; a live plugin and computer use are unnecessary.
+Install MuseScore before running the plan.
 
 For subsequent edits, preserve the returned `target` unchanged in the edit plan:
 
@@ -242,7 +240,7 @@ by default. Failed MSCZ export returns `error`; failed reopen conversion returns
 The legacy IR cannot represent all notation. Do not silently drop unsupported
 lyrics, slurs, articulations or performance semantics to make compilation pass.
 For these, use supported native commands or extend the editor adapter. Missing
-commands must be reported rather than replaced by computer use.
+commands must be reported explicitly.
 
 ## Optional OMR and developer tools
 
