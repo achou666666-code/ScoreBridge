@@ -11,6 +11,17 @@ def main():
     sub.add_parser("doctor")
     prepare=sub.add_parser("prepare"); prepare.add_argument("input"); prepare.add_argument("--output", required=True)
     prepare.add_argument("--dpi", type=int, default=450)
+    audio = sub.add_parser("prepare-audio", help="Prepare audio evidence for the calling Agent")
+    audio.add_argument("input"); audio.add_argument("--output", required=True)
+    audio.add_argument("--segment-seconds", type=float, default=8)
+    audio.add_argument("--overlap-seconds", type=float, default=1)
+    audio.add_argument("--midi-low", type=int, default=24)
+    audio.add_argument("--midi-high", type=int, default=108)
+    evaluate = sub.add_parser("evaluate-audio", help="Measure Agent events against independent reference events")
+    evaluate.add_argument("reference"); evaluate.add_argument("prediction")
+    evaluate.add_argument("--output", default="")
+    evaluate.add_argument("--onset-tolerance", type=float, default=.05)
+    evaluate.add_argument("--offset-tolerance", type=float, default=.1)
     sub.add_parser("editor-status")
     sub.add_parser("editor-connect")
     audit = sub.add_parser("instrument-audit")
@@ -34,6 +45,23 @@ def main():
     validate=sub.add_parser("validate"); validate.add_argument("input")
     compile_cmd=sub.add_parser("compile"); compile_cmd.add_argument("input"); compile_cmd.add_argument("--output", required=True)
     args=parser.parse_args()
+    if args.command in {"prepare-audio", "evaluate-audio"}:
+        from .audio import prepare_audio, evaluate_audio_events
+        try:
+            if args.command == "prepare-audio":
+                report = prepare_audio(args.input, args.output, args.segment_seconds, args.overlap_seconds, args.midi_low, args.midi_high)
+            else:
+                report = evaluate_audio_events(args.reference, args.prediction, args.onset_tolerance, args.offset_tolerance)
+                if args.output:
+                    destination = Path(args.output)
+                    if destination.resolve() in {Path(args.reference).resolve(), Path(args.prediction).resolve()}:
+                        raise ValueError("Report must not overwrite reference or prediction")
+                    destination.parent.mkdir(parents=True, exist_ok=True)
+                    destination.write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8")
+        except (ValueError, OSError) as exc:
+            report = {"status": "error", "error": str(exc)}
+        print(json.dumps(report, ensure_ascii=False, indent=2))
+        raise SystemExit(1 if report.get("status") == "error" else 0)
     if args.command in {"apply-plan", "build-score"}:
         from .musescore.extension import execute_extension_plan_file
         from .musescore.build import build_agent_score

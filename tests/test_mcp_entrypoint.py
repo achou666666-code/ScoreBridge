@@ -18,3 +18,5 @@ def test_server_exposes_agent_default():
 
     assert "musescore_build_score" in tools
     assert "musescore_apply_plan" in tools
+    assert "audio_prepare" in tools
+    assert "audio_evaluate" in tools

@@ -26,7 +26,7 @@ def main():
         subprocess.run(['tar', '-xf', str(archive), '-C', str(source)], check=True)
         subprocess.run([sys.executable, '-m', 'venv', str(work / 'venv')], check=True, env=env)
         python = work / 'venv' / ('Scripts/python.exe' if os.name == 'nt' else 'bin/python')
-        subprocess.run([str(python), '-m', 'pip', 'install', str(source) + '[test,image,websocket,mcp]'], check=True, env=env)
+        subprocess.run([str(python), '-m', 'pip', 'install', str(source) + '[test,image,audio,websocket,mcp]'], check=True, env=env)
         subprocess.run([str(python), '-c',
             'from pathlib import Path; import scorebridge; '
             'p=Path(scorebridge.__file__).resolve(); print("Installed package:",p); '

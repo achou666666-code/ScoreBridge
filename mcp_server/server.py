@@ -27,6 +27,21 @@ except ImportError as exc:
 mcp = FastMCP("ScoreBridge")
 
 @mcp.tool()
+def audio_prepare(input_path: str, output_dir: str, segment_seconds: float = 8.0, overlap_seconds: float = 1.0, midi_low: int = 24, midi_high: int = 108) -> dict:
+    """Prepare time-linked audio/spectral evidence for the calling Agent. Does not recognize music or call DAW transcription."""
+    from scorebridge.audio import prepare_audio
+    return prepare_audio(input_path, output_dir, segment_seconds, overlap_seconds, midi_low, midi_high)
+
+@mcp.tool()
+def audio_evaluate(reference_path: str, prediction_path: str, onset_tolerance: float = .05, offset_tolerance: float = .1) -> dict:
+    """Benchmark Agent event predictions against held-out reference notes; never use reference as recognition input."""
+    from scorebridge.audio import evaluate_audio_events
+    try:
+        return evaluate_audio_events(reference_path, prediction_path, onset_tolerance, offset_tolerance)
+    except (ValueError, OSError) as exc:
+        return {"status": "error", "error": str(exc)}
+
+@mcp.tool()
 def musescore_connect() -> dict:
     """Check a live plugin connection. For unattended work use musescore_build_score/apply_plan."""
     from scorebridge.musescore.connect import connect_editor
